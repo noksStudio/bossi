@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { PRESETS, dispatch, slotContributions, usePort, type EventEnvelope } from '@bossi/kernel';
-import { createRegistry } from '../src/index.js';
-import { ReceivablesPort } from '../src/ports.js';
+import { createRegistry } from '../src/index';
+import { ReceivablesPort } from '../src/ports';
 
 const registry = createRegistry();
 

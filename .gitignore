@@ -6,3 +6,5 @@ dist/
 .next/
 coverage/
 pnpm-lock.yaml.bak
+.vercel
+next-env.d.ts

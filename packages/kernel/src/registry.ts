@@ -7,8 +7,8 @@ import {
   type PortDef,
   type SlotContribution,
   type SlotId,
-} from './types.js';
-import { DependencyError, expandRequirements, topoSort } from './graph.js';
+} from './types';
+import { DependencyError, expandRequirements, topoSort } from './graph';
 
 const EVENT_TYPE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 

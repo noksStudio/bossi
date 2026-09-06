@@ -1,4 +1,4 @@
-import type { ModuleId } from './types.js';
+import type { ModuleId } from './types';
 
 export class DependencyError extends Error {
   constructor(message: string, readonly details: Record<string, unknown> = {}) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ModuleRegistry, definePort, defineEvent, type ModuleManifest } from '../src/index.js';
+import { ModuleRegistry, definePort, defineEvent, type ModuleManifest } from '../src/index';
 
 const Port = definePort<{ ping(): string }>('a.port');
 

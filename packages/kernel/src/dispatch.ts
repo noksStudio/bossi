@@ -1,7 +1,7 @@
-import type { EventEnvelope, HandlerContext, ModuleId, PortDef } from './types.js';
-import type { TenantComposition } from './registry.js';
-import { DependencyError } from './graph.js';
-import { usePort } from './registry.js';
+import type { EventEnvelope, HandlerContext, ModuleId, PortDef } from './types';
+import type { TenantComposition } from './registry';
+import { DependencyError } from './graph';
+import { usePort } from './registry';
 
 export interface DispatchResult {
   readonly type: string;

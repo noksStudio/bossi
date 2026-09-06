@@ -98,3 +98,20 @@ export interface Alerts {
   }): Promise<void>;
 }
 export const AlertsPort = definePort<Alerts>('alerts.sink');
+
+// -------------------------------------------------------------- מדידה וחבילות
+
+export interface Entitlements {
+  /** האם המודול מותר בחבילה של הדייר. */
+  allows(moduleId: string): Promise<boolean>;
+  /** האם אפשר לצרוך עוד — false כשמכסה קשיחה נחצתה. */
+  canConsume(meter: string, amount: number): Promise<boolean>;
+}
+export const EntitlementsPort = definePort<Entitlements>('metering.entitlements');
+
+export interface Usage {
+  /** רישום צריכה. חייב להיות אידמפוטנטי לפי `idempotencyKey`. */
+  record(input: { meter: string; amount: number; idempotencyKey?: string }): Promise<void>;
+  current(): Promise<Record<string, number>>;
+}
+export const UsagePort = definePort<Usage>('metering.usage');

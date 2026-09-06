@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DependencyError, expandRequirements, topoSort } from '../src/graph.js';
+import { DependencyError, expandRequirements, topoSort } from '../src/graph';
 
 const deps: Record<string, string[]> = {
   billing: [],

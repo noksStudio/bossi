@@ -8,13 +8,16 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "modules": "tsx scripts/modules.ts",
-    "check": "pnpm typecheck && pnpm test && pnpm modules services >/dev/null"
+    "check": "pnpm typecheck && pnpm test && pnpm modules services >/dev/null",
+    "dev": "pnpm --filter @bossi/web dev",
+    "build": "pnpm --filter @bossi/web build"
   },
   "dependencies": {
     "@bossi/kernel": "workspace:*",
     "@bossi/modules": "workspace:*"
   },
   "devDependencies": {
+    "playwright": "^1.63.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

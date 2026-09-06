@@ -1,0 +1,206 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+  ─────────────────────────────────────────────────────────────────────────
+  שפת המותג של Bossi
+
+  הרעיון: המערכת מחזיקה מסמכים, חוזים וכסף. היא צריכה להרגיש כמו ארכיון
+  מסודר, לא כמו אפליקציה. לכן הבסיס הוא נייר חם ולא לבן קר, הצבע המוביל
+  הוא דיו כחול-כהה, והמבטא הוא נחושת שרופה — צבע של חותמת ושל תיוק,
+  לא של גרדיאנט.
+
+  שלוש החלטות שנשמרות בכל המערכת:
+    · היררכיה נבנית מגבולות ומרקע, כמעט אף פעם לא מצללים
+    · רדיוסים קטנים (4/8/12) — לא כדורי
+    · המבטא נדיר. אם הכול בולט, שום דבר לא בולט.
+  ─────────────────────────────────────────────────────────────────────────
+*/
+
+@theme {
+  /* ── דיו: הצבע המוביל ──────────────────────────────────── */
+  --color-ink-50: #f2f4f6;
+  --color-ink-100: #e2e6eb;
+  --color-ink-200: #c3ccd5;
+  --color-ink-300: #9aa8b6;
+  --color-ink-400: #6d7f91;
+  --color-ink-500: #4d6070;
+  --color-ink-600: #3a4b59;
+  --color-ink-700: #2b3a47;
+  --color-ink-800: #1c2833;
+  --color-ink-900: #131d26;
+  --color-ink-950: #0b131a;
+
+  /* ── נייר: הרקע החם ────────────────────────────────────── */
+  --color-paper-50: #fdfcfa;
+  --color-paper-100: #faf8f4;
+  --color-paper-200: #f4f0e9;
+  --color-paper-300: #e9e3d8;
+  --color-paper-400: #d7cfc0;
+
+  /* ── נחושת: המבטא ──────────────────────────────────────── */
+  --color-ember-50: #fdf4ee;
+  --color-ember-100: #f9e3d3;
+  --color-ember-200: #f0c3a3;
+  --color-ember-300: #e39d6d;
+  --color-ember-400: #d47a41;
+  --color-ember-500: #bf5f26;
+  --color-ember-600: #a34c1d;
+  --color-ember-700: #823c1a;
+  --color-ember-800: #62301a;
+
+  /* ── סמנטיקה: עמומה בכוונה, לא ניאון ──────────────────── */
+  --color-sage-500: #45705a;
+  --color-sage-100: #dcebe2;
+  --color-ochre-500: #a8790f;
+  --color-ochre-100: #f7ecd0;
+  --color-rust-500: #a63c2b;
+  --color-rust-100: #f7dfda;
+
+  --font-display: var(--font-frank), Georgia, 'Times New Roman', serif;
+  --font-sans: var(--font-heebo), ui-sans-serif, system-ui, sans-serif;
+
+  /* גשר לתפקידי הצבע — מייצר את המחלקות (bg-surface, text-muted…) כשהערך
+     עצמו נשאר דינמי ומתחלף עם ערכת הנושא. */
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-hairline: var(--border-hairline);
+  --color-strong: var(--border-strong);
+  --color-primary: var(--text-primary);
+  --color-secondary: var(--text-secondary);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-accent-quiet: var(--accent-quiet);
+  --color-positive: var(--positive);
+  --color-positive-quiet: var(--positive-quiet);
+  --color-warning: var(--warning);
+  --color-warning-quiet: var(--warning-quiet);
+  --color-danger: var(--danger);
+  --color-danger-quiet: var(--danger-quiet);
+
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ── תפקידי צבע. מוגדרים במלואם בהיר, ונדרסים בכהה. ─────── */
+:root {
+  --surface: var(--color-paper-100);
+  --surface-raised: #ffffff;
+  --surface-sunken: var(--color-paper-200);
+  --surface-inverse: var(--color-ink-900);
+
+  --border-hairline: var(--color-paper-300);
+  --border-strong: var(--color-paper-400);
+
+  --text-primary: var(--color-ink-900);
+  --text-secondary: var(--color-ink-600);
+  --text-muted: var(--color-ink-400);
+  --text-inverse: var(--color-paper-100);
+
+  --accent: var(--color-ember-600);
+  --accent-hover: var(--color-ember-700);
+  --accent-quiet: var(--color-ember-50);
+
+  --positive: var(--color-sage-500);
+  --positive-quiet: var(--color-sage-100);
+  --warning: var(--color-ochre-500);
+  --warning-quiet: var(--color-ochre-100);
+  --danger: var(--color-rust-500);
+  --danger-quiet: var(--color-rust-100);
+
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --surface: #0e161d;
+  --surface-raised: #141f28;
+  --surface-sunken: #0a1116;
+  --surface-inverse: var(--color-paper-100);
+
+  --border-hairline: #223039;
+  --border-strong: #2e414d;
+
+  --text-primary: #e8e6e1;
+  --text-secondary: #a6b2bc;
+  --text-muted: #6d7f8c;
+  --text-inverse: var(--color-ink-900);
+
+  --accent: var(--color-ember-400);
+  --accent-hover: var(--color-ember-300);
+  --accent-quiet: #2a1b12;
+
+  --positive: #6fa387;
+  --positive-quiet: #17281f;
+  --warning: #d2a340;
+  --warning-quiet: #2c2314;
+  --danger: #d4776a;
+  --danger-quiet: #2e1714;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--border-hairline);
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: 'kern';
+  }
+
+  /* מספרים בטבלאות ובמדדים תמיד ברוחב אחיד — אחרת סכומים רוקדים. */
+  .tnum,
+  table {
+    font-variant-numeric: tabular-nums;
+  }
+
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  ::selection {
+    background: var(--accent-quiet);
+    color: var(--accent-hover);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+}
+
+@layer components {
+  /* המבטא נדיר — לכן הוא מוגדר פעם אחת ולא מפוזר בכל קומפוננטה. */
+  .rule {
+    border: 0;
+    border-block-start: 1px solid var(--border-hairline);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,7 +1,11 @@
 {
   "files": [],
   "references": [
-    { "path": "packages/kernel" },
-    { "path": "packages/modules" }
+    {
+      "path": "packages/kernel"
+    },
+    {
+      "path": "packages/modules"
+    }
   ]
 }

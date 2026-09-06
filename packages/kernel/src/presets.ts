@@ -1,4 +1,4 @@
-import type { ModuleId } from './types.js';
+import type { ModuleId } from './types';
 
 /**
  * חבילות מוכנות. `business_type` של דייר הוא בסך הכול חבילה כזו —
@@ -7,10 +7,10 @@ import type { ModuleId } from './types.js';
  */
 export const PRESETS = {
   /** התחלה זולה: מסמכים בלבד. הדלת הכי רחבה לכניסה. */
-  documents: ['documents', 'search'],
+  documents: ['documents', 'search', 'metering'],
 
   /** עסקי שירותים — עורכי דין, רו"ח, סוכנויות, יועצים. */
-  services: ['documents', 'search', 'billing', 'collections', 'retainers', 'alerts'],
+  services: ['documents', 'search', 'billing', 'collections', 'retainers', 'alerts', 'metering'],
 
   /** עסקי מוצר B2B — יבואנים, מפיצים, ספקים. */
   commerce: [
@@ -23,6 +23,7 @@ export const PRESETS = {
     'orders',
     'portal',
     'alerts',
+    'metering',
   ],
 
   /** הכול. */
@@ -37,6 +38,7 @@ export const PRESETS = {
     'orders',
     'portal',
     'alerts',
+    'metering',
   ],
 } satisfies Record<string, ModuleId[]>;
 

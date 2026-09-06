@@ -4,12 +4,14 @@ import {
   AlertsPort,
   AvailabilityPort,
   DocumentsPort,
+  EntitlementsPort,
   InvoicingPort,
   PricingPort,
   ReceivablesPort,
   SearchPort,
-} from './ports.js';
-import { stubPort } from './stub.js';
+  UsagePort,
+} from './ports';
+import { stubPort } from './stub';
 
 // ══════════════════════════════════════════════════════════ מסמכים
 
@@ -349,6 +351,53 @@ export const alerts: ModuleManifest = {
   tables: ['alert_rules', 'alerts', 'alert_deliveries'],
 };
 
+
+// ══════════════════════════════════════════════════════════ מדידה וחבילות
+
+/**
+ * הגבייה של Bossi מבעל העסק — להבדיל מ-`billing`, שהוא הגבייה של בעל העסק מהלקוחות שלו.
+ * שני עולמות נפרדים לגמרי שלא נפגשים בשום טבלה.
+ */
+export const metering: ModuleManifest = {
+  id: 'metering',
+  name: 'חבילה וצריכה',
+  description: 'מדידת אחסון, מסמכים, מיילים ופעולות AI מול מכסות החבילה.',
+  category: 'intelligence',
+  provides: [
+    { port: UsagePort, factory: () => stubPort(UsagePort) },
+    { port: EntitlementsPort, factory: () => stubPort(EntitlementsPort) },
+  ],
+  emits: [
+    defineEvent('metering.recorded', 'נרשמה צריכה'),
+    defineEvent('metering.quota_warning', 'ניצול חצה 80% מהמכסה'),
+    defineEvent('metering.quota_exceeded', 'המכסה נחצתה'),
+    defineEvent('metering.blocked', 'פעולה נחסמה בשל מכסה קשיחה'),
+    defineEvent('metering.plan_changed', 'החבילה שונתה'),
+  ],
+  handlers: [
+    { id: 'metering.count_documents', on: ['documents.received'], requires: ['documents'], handle: async () => {} },
+    { id: 'metering.count_emails', on: ['collections.reminder_sent'], requires: ['collections'], handle: async () => {} },
+  ],
+  nav: [{ id: 'metering', label: 'חבילה וצריכה', href: '/settings/plan', order: 90, realm: 'staff' }],
+  slots: [
+    { slot: 'settings.sections', id: 'metering.plan', label: 'החבילה שלי', order: 10 },
+    { slot: 'dashboard.widgets', id: 'metering.usage_bar', label: 'ניצול החבילה', order: 90 },
+  ],
+  jobs: [
+    { id: 'metering.rollup', schedule: '0 * * * *', description: 'צבירת מדדים שעתית' },
+    { id: 'metering.storage_scan', schedule: '0 3 * * *', description: 'מדידת אחסון בפועל' },
+    { id: 'metering.close_cycle', schedule: '0 2 1 * *', description: 'סגירת מחזור חיוב וחישוב חריגות' },
+  ],
+  permissions: ['metering.read', 'metering.manage_plan'],
+  settings: z.object({
+    plan: z.enum(['starter', 'pro', 'mega']).default('starter'),
+    cycleStartDay: z.number().int().min(1).max(28).default(1),
+    blockOnHardQuota: z.boolean().default(true),
+    warnAtPercent: z.number().min(0).max(1).default(0.8),
+  }),
+  tables: ['subscriptions', 'usage_events', 'usage_rollups', 'billing_cycles'],
+};
+
 export const ALL_MODULES = [
   documents,
   search,
@@ -360,4 +409,5 @@ export const ALL_MODULES = [
   orders,
   portal,
   alerts,
+  metering,
 ] satisfies ModuleManifest[];
