@@ -10,7 +10,10 @@
     "modules": "tsx scripts/modules.ts",
     "check": "pnpm typecheck && pnpm test && pnpm modules services >/dev/null",
     "dev": "pnpm --filter @bossi/web dev",
-    "build": "pnpm --filter @bossi/web build"
+    "build": "pnpm --filter @bossi/web build",
+    "db:migrate": "pnpm --filter @bossi/db migrate",
+    "db:seed": "pnpm --filter @bossi/db seed",
+    "db:reset": "pnpm --filter @bossi/db reset"
   },
   "dependencies": {
     "@bossi/kernel": "workspace:*",

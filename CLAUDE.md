@@ -5,10 +5,13 @@
 
 ## כללי ברזל (אסור לעבור עליהם בלי ADR חדש)
 
-1. **RLS על כל טבלה.** לכל טבלה `tenant_id` ומדיניות
-   `using (tenant_id = current_setting('app.tenant_id')::uuid)`.
-   כל בקשה פותחת טרנזקציה עם `set local app.tenant_id`.
-   בידוד דיירים לא נשען על `WHERE` שנזכור להוסיף.
+1. **RLS על כל טבלה.** `enable` **וגם** `force row level security` — בלי FORCE
+   בעל הסכמה עוקף הכול, וב-Neon בעל הסכמה הוא מי שהאפליקציה מתחברת בתור.
+   גישה רק דרך `withTenant()`; `withPlatform()` הוא חריג מודע.
+   בדיקת `rls-coverage` נכשלת על כל טבלה חדשה בלי בידוד — אי אפשר לשכוח.
+
+1א. **כל FK אל ישות של דייר הוא מורכב וכולל `tenant_id`.** בדיקת FK מתעלמת
+   מ-RLS, ולכן FK פשוט מאפשר הצבעה חוצת־דיירים. ראה [ADR-005](docs/06-decisions.md).
 
 2. **שני realms של זהות.** `users` (צוות) ו-`portal_users` (לקוחות) הן טבלאות נפרדות,
    עם טוקנים ב-audience נפרד ו-middleware נפרד. **לעולם לא למזג לתפקיד על טבלה אחת.**
@@ -40,8 +43,11 @@
 
 ## סטאק
 
-Next.js (App Router) + TypeScript · Drizzle + Postgres 16 (pgvector, pg_trgm, pg-boss) ·
-Tailwind + Radix · zod · S3/R2 · Claude ל-AI.
+Next.js (App Router) + TypeScript · Postgres 16 (pgvector, pg_trgm, pg-boss) ·
+Tailwind v4 · zod · S3/R2 · Claude ל-AI.
+
+**סכמה:** מיגרציות SQL הן מקור האמת. שכבת השאילתות היא פונקציות מטופסות מעל `pg`.
+Drizzle ייכנס דרך `drizzle-kit pull` כשמשטח השאילתות יצדיק — [ADR-004](docs/06-decisions.md).
 
 **בלי Redis, בלי vector DB נפרד, בלי מיקרו-שירותים.** להוסיף רק מול כאב מדוד.
 
@@ -49,8 +55,8 @@ Tailwind + Radix · zod · S3/R2 · Claude ל-AI.
 
 ```
 packages/kernel   ✅ מרשם המודולים: מניפסטים, פורטים, אירועים, slots, הרכבה פר-דייר
-packages/modules  ✅ מניפסטים ופורטים של עשרת המודולים
-packages/db          סכמה, מיגרציות, RLS, seed
+packages/modules  ✅ מניפסטים, פורטים, חבילות ומכסות
+packages/db       ✅ מיגרציות, RLS, שכבת שאילתות, אירועים, seed
 packages/core        לוגיקה עסקית טהורה, מפוצלת לפי מודול
 packages/ai          סיווג, חילוץ, חיפוש — עם evals
 packages/integrations  הנפקה, סליקה, WhatsApp, מייל נכנס, אחסון
@@ -62,7 +68,12 @@ apps/web             אפליקציית העסק + פורטל (route group), wor
 ```bash
 pnpm check              # typecheck + בדיקות + אימות המרשם
 pnpm modules services   # מה מקבל דייר עם החבילה הזו
+pnpm db:migrate         # מיגרציות (קדימה בלבד)
+pnpm db:seed            # שני דיירים — שירותים ו-B2B
+pnpm db:reset           # מחיקה ובנייה מחדש (מקומי בלבד)
 ```
+
+בדיקות המסד דורשות `DATABASE_URL`. בלעדיו הן מדולגות עם אזהרה — **לא נחשבות עוברות.**
 
 ## סדר עבודה למשימה
 
