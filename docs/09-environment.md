@@ -135,8 +135,83 @@ Intelligence.
 | Node.js Version | 22.x |
 | Region | `fra1` — קרוב לישראל ולמסד ב-eu-central |
 
-`vercel.json` כבר מגדיר את חמש משימות ה-cron. הן מוגנות ב-`CRON_SECRET`, אז ללא
-המשתנה הזה הן יחזירו 401 (וזו ההתנהגות הנכונה).
+**זיהוי ה-framework:** Vercel קורא את ה-`package.json` שב-Root Directory. מכיוון
+ש-Root Directory הוא שורש הריפו, `next` מופיע גם ב-`devDependencies` של השורש —
+אחרת הבנייה נכשלת ב-*No Next.js version detected* עוד לפני שהיא מגיעה
+ל-`buildCommand`. התלות האמיתית נשארת ב-`apps/web`.
+
+חלופה נקייה יותר לטווח ארוך: להעביר את Root Directory ל-`apps/web` ולסמן
+*Include files outside root directory*. אז אפשר להסיר את `next` מהשורש.
+
+---
+
+## היגיינת סודות
+
+- **אף מפתח לא נכנס ל-git.** `.env.local` ב-`.gitignore`; רק `.env.example` נשמר.
+- **סיבוב מפתחות אחרי כל עזיבה** של מי שהייתה לו גישה.
+- **`NEXT_PUBLIC_*` נחשף לדפדפן.** מפתח שדולף לשם נחשב פרוץ. אין שם סודות.
+- **מפתחות נפרדים ל-Preview.** מפתח ייצור בסביבת Preview = מייל אמיתי ללקוח אמיתי
+  מבדיקה של בוקר.
+
+---
+
+## משימות מתוזמנות — כבויות כרגע
+
+**אין `crons` ב-`vercel.json`.** ההחלטה: לא לשלם על Vercel Pro לפני שיש לקוחות
+משלמים. אין לזה שום השפעה היום — אף אחד מהנתיבים המתוזמנים עוד לא נבנה
+(הם נכנסים בספרינטים 5–12).
+
+### מה בכל זאת יעבוד בלי cron
+
+**קליטת המסמכים — הפיצ'ר הכי חשוב — לא צריכה cron בכלל.** ספק המייל הנכנס שולח
+webhook ל-`/api/inbound/email` ברגע שמייל מגיע. זה גם מהיר יותר (שניות במקום
+דקות) וגם זול יותר מפולינג. אותו דבר לסליקה, WhatsApp וסנכרון ERP — כולם דוחפים
+אלינו ולא נסקרים.
+
+### מה יידרש cron, וממתי
+
+| נתיב | ספרינט | מה יקרה בלעדיו |
+|---|---|---|
+| `/api/cron/daily-scan` | 5 | התראות על תוקף מסמכים ושחיקת ריטיינר לא ייווצרו לבד |
+| `/api/cron/dunning` | 8 | סולם הדחיפה לא יתקדם אוטומטית |
+| `/api/cron/morning-digest` | 10 | אין דייג'סט בוקר |
+
+עד אז — לא רלוונטי. **הנתיבים ייבנו מאומתים ב-`CRON_SECRET` ואידמפוטנטיים**, כדי
+שהדלקה מאוחרת תהיה שינוי הגדרה ולא שינוי קוד.
+
+### להדליק כשיהיו לקוחות משלמים
+
+שלוש דרכים, לפי הסדר:
+
+1. **GitHub Actions** — `schedule` בכל תדירות שקורא ל-endpoint עם `CRON_SECRET`.
+   **חינם**, ומספיק לכל מה שנצטרך בשנה הראשונה. זו ההמלצה.
+2. **Vercel Pro** — 20 $/חודש, cron בכל תדירות, אפס תחזוקה.
+3. **Upstash QStash / cron-job.org** — מתזמן חיצוני.
+
+להחזרת ה-cron של Vercel: להוסיף בחזרה את מפתח `crons` ל-`vercel.json`.
+⚠️ במסלול Hobby מותר **cron יומי אחד לכל נתיב** — `*/5 * * * *` נדחה בבנייה.
+
+---
+
+## הגדרות Vercel
+
+הפרויקט מחובר. שדות שצריך לוודא ב-Settings:
+
+| שדה | ערך |
+|---|---|
+| Framework | Next.js |
+| Root Directory | **שורש הריפו** — `vercel.json` מטפל במונורפו |
+| Build Command | מ-`vercel.json`: `pnpm --filter @bossi/web build` |
+| Node.js Version | 22.x |
+| Region | `fra1` — קרוב לישראל ולמסד ב-eu-central |
+
+**זיהוי ה-framework:** Vercel קורא את ה-`package.json` שב-Root Directory. מכיוון
+ש-Root Directory הוא שורש הריפו, `next` מופיע גם ב-`devDependencies` של השורש —
+אחרת הבנייה נכשלת ב-*No Next.js version detected* עוד לפני שהיא מגיעה
+ל-`buildCommand`. התלות האמיתית נשארת ב-`apps/web`.
+
+חלופה נקייה יותר לטווח ארוך: להעביר את Root Directory ל-`apps/web` ולסמן
+*Include files outside root directory*. אז אפשר להסיר את `next` מהשורש.
 
 ---
 

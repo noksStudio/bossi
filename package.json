@@ -20,7 +20,7 @@
     "@bossi/modules": "workspace:*"
   },
   "devDependencies": {
-    "playwright": "^1.63.0",
+    "next": "^15.1.6",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
