@@ -3,8 +3,9 @@ import { BossiWordmark } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 
 const LINKS = [
-  { href: '#problem', label: 'הבעיה' },
   { href: '#how', label: 'איך זה עובד' },
+  { href: '#dashboard', label: 'דשבורד' },
+  { href: '#search', label: 'חיפוש' },
   { href: '#modules', label: 'מודולים' },
   { href: '#pricing', label: 'מחירים' },
 ];

@@ -50,13 +50,20 @@
   --color-ember-700: #823c1a;
   --color-ember-800: #62301a;
 
-  /* ── סמנטיקה: עמומה בכוונה, לא ניאון ──────────────────── */
-  --color-sage-500: #45705a;
+  /* ── סמנטיקה ────────────────────────────────────────────
+     נבדקו בכלי ולא בעין. שני ממצאים אמיתיים תוקנו:
+       · הירוק המקורי (#45705a) היה בכרומה 0.06 — נקרא אפור.
+       · האדום המקורי (#a63c2b) היה במרחק ΔE 9.8 מהנחושת בראייה
+         תקינה — כלומר "באיחור" ופעולה ראשית נראו אותו צבע.
+         הועבר ליין עמוק, ΔE 15.3.
+     בכהה ההפרדה מגיעה ל-12.5 בלבד; לכן כל מצב נושא תמיד תווית
+     בעברית ולעולם לא צבע לבדו. */
+  --color-sage-500: #12874e;
   --color-sage-100: #dcebe2;
-  --color-ochre-500: #a8790f;
+  --color-ochre-500: #b0810d;
   --color-ochre-100: #f7ecd0;
-  --color-rust-500: #a63c2b;
-  --color-rust-100: #f7dfda;
+  --color-rust-500: #9c2740;
+  --color-rust-100: #f7dde3;
 
   --font-display: var(--font-frank), Georgia, 'Times New Roman', serif;
   --font-sans: var(--font-heebo), ui-sans-serif, system-ui, sans-serif;
@@ -135,12 +142,12 @@
   --accent-hover: var(--color-ember-300);
   --accent-quiet: #2a1b12;
 
-  --positive: #6fa387;
+  --positive: #3f9a6e;
   --positive-quiet: #17281f;
-  --warning: #d2a340;
+  --warning: #b58a30;
   --warning-quiet: #2c2314;
-  --danger: #d4776a;
-  --danger-quiet: #2e1714;
+  --danger: #cd5580;
+  --danger-quiet: #2e1720;
 
   color-scheme: dark;
 }

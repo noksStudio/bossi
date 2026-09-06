@@ -68,7 +68,7 @@ export const PLANS: Record<PlanId, Plan> = {
   starter: {
     id: 'starter',
     name: 'Starter Boss',
-    tagline: 'כל המסמכים במקום אחד, ואף חוב לא נשכח.',
+    tagline: 'כל הלקוחות והמסמכים במקום אחד, וכל דבר נמצא בשנייה.',
     monthlyPrice: 497,
     setupFee: null,
     modules: ['documents', 'search', 'billing', 'collections', 'metering'],
@@ -84,6 +84,7 @@ export const PLANS: Record<PlanId, Plan> = {
       active_customers: q(50, null),
     },
     highlights: [
+      'כרטיס לקוח עם ציר זמן מלא',
       'קליטת מסמכים ממייל ייעודי',
       'תיוק אוטומטי ומעקב תוקף',
       'חיפוש מלא בכל המסמכים',
@@ -94,7 +95,7 @@ export const PLANS: Record<PlanId, Plan> = {
   pro: {
     id: 'pro',
     name: 'Boss Pro',
-    tagline: 'הריטיינרים מפסיקים להישחק והגבייה מתחילה לעבוד לבד.',
+    tagline: 'הדשבורד מסדר את היום, והמערכת מתחילה לעבוד לבד.',
     monthlyPrice: 1_490,
     setupFee: null,
     modules: ['documents', 'search', 'billing', 'collections', 'retainers', 'alerts', 'portal', 'metering'],
@@ -111,6 +112,8 @@ export const PLANS: Record<PlanId, Plan> = {
     },
     highlights: [
       'כל מה שב-Starter Boss',
+      'דשבורד יומי — מה דורש אותך',
+      'חיפוש עם ציטוט מהמקור',
       'ריטיינרים עם תחזית שחיקה',
       'תעריף שעה אפקטיבי וראדאר חידושים',
       'התראות חכמות ודייג\'סט בוקר',

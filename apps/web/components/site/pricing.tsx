@@ -32,9 +32,10 @@ export function Pricing() {
             <p className="mt-1.5 min-h-10 text-[0.88rem] leading-relaxed text-secondary">{plan.tagline}</p>
 
             <div className="mt-5 flex items-baseline gap-1.5">
-              <span className="tnum text-4xl font-semibold" style={{ fontFamily: 'var(--font-display)' }}>
-                {nis.format(plan.monthlyPrice)}
-              </span>
+              {/* מספר ראשי: סנס ולא סריף, וספרות פרופורציונליות —
+                  tabular-nums מרווח כל ספרה לרוחב אפס ונראה רופף בגודל תצוגה.
+                  הוא שמור לעמודות מספרים שחייבות להתיישר. */}
+              <span className="text-4xl font-semibold">{nis.format(plan.monthlyPrice)}</span>
               <span className="text-lg text-secondary">₪</span>
               <span className="text-sm text-muted">/ חודש</span>
             </div>

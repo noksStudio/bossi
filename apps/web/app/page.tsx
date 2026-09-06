@@ -1,5 +1,7 @@
 import { SiteHeader } from '@/components/site/header';
-import { ProductPreview } from '@/components/site/product-preview';
+import { CustomerCard } from '@/components/site/customer-card';
+import { DashboardPreview } from '@/components/site/dashboard-preview';
+import { SearchPreview } from '@/components/site/search-preview';
 import { Pricing } from '@/components/site/pricing';
 import { BossiWordmark } from '@/components/brand/logo';
 
@@ -11,7 +13,10 @@ export default function LandingPage() {
         <Hero />
         <Problem />
         <HowItWorks />
+        <Dashboard />
+        <Retrieval />
         <Modules />
+        <Money />
         <PricingSection />
         <Trust />
         <Cta />
@@ -29,16 +34,16 @@ function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 py-14 lg:grid-cols-[1.05fr_1fr] lg:py-20">
         <div>
           <p className="mb-5 text-[0.8rem] font-medium tracking-wide text-muted">מערכת הפעלה לעסק</p>
-          <h1 className="text-[2.35rem] leading-[1.15] sm:text-[3rem] lg:text-[3.35rem]">
-            כל שקל שמגיע לך,
+          <h1 className="text-[2.35rem] leading-[1.15] sm:text-[3rem] lg:text-[3.3rem]">
+            כל מה שאתה יודע
             <br />
-            וכל מסמך שמוכיח אותו —
+            על הלקוחות שלך —
             <br />
             <span style={{ color: 'var(--accent)' }}>במקום אחד.</span>
           </h1>
           <p className="mt-6 max-w-lg text-[1.05rem] leading-relaxed text-secondary">
-            Bossi מחברת את הלקוחות, הריטיינרים, המסמכים והגבייה לציר זמן אחד.
-            מה שנפל בין הכיסאות — מפסיק ליפול.
+            Bossi אוספת את המסמכים, אנשי הקשר וההיסטוריה של כל לקוח לתמונה אחת,
+            ומסך אחד שמראה לך מה קורה. בלי לחפש, בלי לשאול מי יודע.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -49,19 +54,16 @@ function Hero() {
             >
               להתחיל מ־497 ₪ לחודש
             </a>
-            <a
-              href="#how"
-              className="rounded-md border border-strong px-5 py-3 text-[0.95rem] font-medium"
-            >
+            <a href="#how" className="rounded-md border border-strong px-5 py-3 text-[0.95rem] font-medium">
               לראות איך זה עובד
             </a>
           </div>
 
           <dl className="mt-12 grid grid-cols-3 gap-6 border-t border-hairline pt-7">
             {[
-              { k: 'ריטיינרים', v: 'בלי שחיקה' },
-              { k: 'גבייה', v: 'עם ראיות' },
-              { k: 'מסמכים', v: 'שמוצאים את עצמם' },
+              { k: 'ריכוז', v: 'הכול נכנס לבד' },
+              { k: 'שליפה', v: 'תשובה עם מקור' },
+              { k: 'סדר', v: 'מסך שמארגן' },
             ].map((s) => (
               <div key={s.k}>
                 <dt className="text-xs text-muted">{s.k}</dt>
@@ -71,7 +73,7 @@ function Hero() {
           </dl>
         </div>
 
-        <ProductPreview />
+        <CustomerCard />
       </div>
     </section>
   );
@@ -81,29 +83,29 @@ function Hero() {
 
 const QUOTES = [
   {
-    q: 'שכחתי שהריטיינר של דני עולה בינואר. עבדתי לו שנה שלמה במחיר של 2023.',
+    q: 'המידע על הלקוח מפוזר בין וואטסאפ, מייל, דרייב, ואצבע אחת בראש שלי.',
     who: 'בעל סוכנות דיגיטל, 9 עובדים',
-    cost: '≈ 18,000 ₪ בשנה',
+    cost: 'כל יום מחדש',
   },
   {
-    q: 'הוא טוען שסיכמנו אחרת. אני יודע שיש לי את זה בכתב — רק לא זוכר איפה.',
+    q: 'לקח לי ארבעים דקות למצוא את ההצעה שהוא אישר. בסוף ויתרתי והתקשרתי לשאול.',
     who: 'עורך דין, משרד בוטיק',
-    cost: 'שעתיים חיפוש, וויתור על הטענה',
+    cost: '40 דק׳',
   },
   {
-    q: 'עשיתי לו החודש עוד שלושה דברים מחוץ לריטיינר. לא חייבתי. לא נעים.',
-    who: 'יועצת שיווק עצמאית',
-    cost: '≈ 2,400 ₪ בחודש',
-  },
-  {
-    q: 'הזמנה נכנסה בוואטסאפ, הקלדתי לחשבשבת, טעיתי בכמות. הלקוח קיבל חצי.',
+    q: 'מישהי במשרד יודעת איפה זה. אני לא.',
     who: 'מנהל תפעול, יבואן מוצרי חשמל',
-    cost: 'משלוח חוזר + לקוח כועס',
+    cost: 'תלוי באדם אחד',
   },
   {
-    q: 'יש לי 180 אלף בחובות פתוחים ואני לא יודע על מי להתקשר קודם.',
+    q: 'עובד עזב, וחצי מהידע על הלקוחות שלו הלך איתו.',
+    who: 'בעלת משרד רואי חשבון',
+    cost: 'לא ניתן לשחזור',
+  },
+  {
+    q: 'שאלו אותי מה מצב הלקוח. לא ידעתי מאיפה להתחיל לענות.',
     who: 'בעל מפעל קטן',
-    cost: 'תזרים תקוע',
+    cost: 'אין תמונה',
   },
 ];
 
@@ -113,11 +115,11 @@ function Problem() {
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
         <div className="max-w-2xl">
           <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">
-            זה לא חוסר סדר. זו דליפה כספית.
+            המידע קיים. הוא פשוט לא במקום אחד.
           </h2>
           <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
-            אף בעל עסק לא אומר &laquo;אין לי CRM&raquo;. הוא אומר משפטים כאלה — וכל אחד מהם
-            הוא כסף שיצא מהכיס.
+            אף בעל עסק לא אומר &laquo;אין לי CRM&raquo;. הוא אומר משפטים כאלה — וכולם
+            אותה בעיה: הידע קיים בעסק, אבל אי אפשר להגיע אליו.
           </p>
         </div>
 
@@ -137,9 +139,7 @@ function Problem() {
               </blockquote>
               <figcaption className="mt-4 flex items-center justify-between gap-3 border-t border-hairline pt-3 text-xs">
                 <span className="text-muted">{item.who}</span>
-                <span className="tnum shrink-0 font-medium" style={{ color: 'var(--danger)' }}>
-                  {item.cost}
-                </span>
+                <span className="shrink-0 font-medium text-secondary">{item.cost}</span>
               </figcaption>
             </figure>
           ))}
@@ -152,12 +152,12 @@ function Problem() {
 /* ─────────────────────────────────────────────────────────── How */
 
 const CHAIN = [
-  { t: 'חוזה נחתם', k: 'ראיה', d: 'נקלט מהמייל, מסווג ומתויק אוטומטית' },
-  { t: 'ריטיינר נפתח', k: 'התחייבות', d: 'מכסה, תעריף חריגה, מועד חידוש' },
-  { t: 'נצרכות שעות', k: 'שחיקה', d: 'ב־15 לחודש: ״78% נוצלו, יסיים ב־156%״' },
-  { t: 'חשבונית מונפקת', k: 'חוב', d: 'דרך מערכת החשבוניות שכבר יש לך' },
-  { t: 'עובר את המועד', k: 'סיכון', d: 'לפי הדפוס של הלקוח, לא לפי לוח שנה' },
-  { t: 'תזכורת נשלחת', k: 'פעולה', d: 'עם החוזה ותעודת המשלוח מצורפים' },
+  { t: 'המידע נכנס', k: 'ריכוז', d: 'מייל ייעודי, וואטסאפ, סריקה, גרירה. מכל מקום שהוא כבר מגיע ממנו' },
+  { t: 'נוחת על הלקוח הנכון', k: 'ריכוז', d: 'מזוהה, מסווג ומתויק לבד. מה שלא בטוח — שלושה כפתורים' },
+  { t: 'הכול על ציר זמן אחד', k: 'סדר', d: 'מסמך, שיחה, הזמנה וחשבונית — ברצף אחד לכל לקוח' },
+  { t: 'שואלים ומקבלים', k: 'שליפה', d: 'שאלה בעברית, תשובה עם ציטוט מעמוד וסעיף' },
+  { t: 'הדשבורד מסדר', k: 'סדר', d: 'מה דורש אותך היום, ומי נשכח' },
+  { t: 'וגם הכסף מסתדר', k: 'תוצאה', d: 'ריטיינרים וגבייה יושבים על אותו מידע ומפסיקים לדלוף' },
 ];
 
 function HowItWorks() {
@@ -165,11 +165,11 @@ function HowItWorks() {
     <section id="how" className="border-b border-hairline">
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
         <div className="max-w-2xl">
-          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">הכול חי על ציר זמן אחד</h2>
+          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">מהפיזור לתמונה אחת</h2>
           <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
-            Monday יודע משימות. Drive יודע קבצים. מערכת החשבוניות יודעת כסף.
-            אף אחד מהם לא יודע שהחוב הזה נשען על החוזה ההוא —{' '}
-            <strong className="font-semibold text-primary">וזה כל ההבדל.</strong>
+            אתה לא צריך לשנות איך אתה עובד. המידע ממשיך להגיע כמו שהוא מגיע היום —
+            Bossi רק דואגת שהוא ינחת במקום הנכון,{' '}
+            <strong className="font-semibold text-primary">ושתמצא אותו כשתצטרך.</strong>
           </p>
         </div>
 
@@ -177,7 +177,7 @@ function HowItWorks() {
           {CHAIN.map((step, i) => (
             <li key={step.t} className="bg-surface p-5">
               <div className="flex items-center gap-2.5">
-                <span className="tnum text-xs text-muted">0{i + 1}</span>
+                <span className="text-xs text-muted">0{i + 1}</span>
                 <span
                   className="rounded-full px-2 py-0.5 text-[0.68rem] font-medium"
                   style={{ background: 'var(--accent-quiet)', color: 'var(--accent)' }}
@@ -195,19 +195,93 @@ function HowItWorks() {
   );
 }
 
+/* ─────────────────────────────────────────────────────── Dashboard */
+
+function Dashboard() {
+  return (
+    <section id="dashboard" className="border-b border-hairline bg-sunken">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 py-16 lg:grid-cols-[1fr_1.1fr] lg:py-20">
+        <div>
+          <p className="mb-4 text-[0.8rem] font-medium tracking-wide text-muted">סדר</p>
+          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">
+            מסך אחד שאומר לך מה קורה
+          </h2>
+          <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
+            לא עוד לוח מלא בגרפים שאף אחד לא פותח. הדשבורד של Bossi עונה על שלוש
+            שאלות בלבד — <strong className="font-semibold text-primary">מה נכנס, מה דורש אותי, ומי נשכח.</strong>
+          </p>
+
+          <ul className="mt-7 space-y-4">
+            {[
+              { t: 'שלושה דברים, לא שלושים', d: 'רק מה שבאמת דורש החלטה היום. אם הכול בולט, שום דבר לא בולט' },
+              { t: 'כל שורה נושאת פעולה', d: 'תזכורת, בקשה, דחייה לשבוע. התראה בלי כפתור היא רעש' },
+              { t: '״נכנס היום״', d: 'מה שהמערכת תייקה לבד, ולאיזה לקוח. ככה רואים שהריכוז עובד' },
+              { t: 'מי שנשכח', d: 'לקוח קבוע שלא דיברת איתו חודשיים — לפי הדפוס שלו, לא לפי לוח שנה' },
+            ].map((f) => (
+              <li key={f.t} className="border-t border-hairline pt-3.5">
+                <h3 className="text-[1rem]">{f.t}</h3>
+                <p className="mt-1 text-[0.88rem] leading-relaxed text-secondary">{f.d}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <DashboardPreview />
+      </div>
+    </section>
+  );
+}
+
+/* ─────────────────────────────────────────────────────── Retrieval */
+
+function Retrieval() {
+  return (
+    <section id="search" className="border-b border-hairline">
+      <div className="mx-auto grid max-w-6xl items-center gap-14 px-5 py-16 lg:grid-cols-[1.1fr_1fr] lg:py-20">
+        <SearchPreview />
+
+        <div>
+          <p className="mb-4 text-[0.8rem] font-medium tracking-wide text-muted">שליפה</p>
+          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">
+            שאלה בעברית. תשובה עם מקור.
+          </h2>
+          <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
+            לא רשימת קבצים שצריך לפתוח אחד-אחד. Bossi עונה על השאלה ומראה בדיוק
+            מאיפה — איזה מסמך, איזה עמוד, איזה סעיף.
+          </p>
+
+          <ul className="mt-7 space-y-4">
+            {[
+              { t: 'מחפש גם מה שכתוב אחרת', d: '״ביטול״ ימצא גם ״הפסקת התקשרות״. ומספר חוזה מדויק יימצא כמספר' },
+              { t: 'בתוך מסמכים סרוקים', d: 'חוזה מצולם בטלפון נקרא ונכנס לחיפוש כמו כל טקסט' },
+              { t: 'תמיד עם ציטוט', d: 'בלי מקור אין אמון — ובלי אמון לא תסמוך על זה בוויכוח מול לקוח' },
+            ].map((f) => (
+              <li key={f.t} className="border-t border-hairline pt-3.5">
+                <h3 className="text-[1rem]">{f.t}</h3>
+                <p className="mt-1 text-[0.88rem] leading-relaxed text-secondary">{f.d}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─────────────────────────────────────────────────────────── Modules */
 
 const MODULE_CARDS = [
+  { id: 'customers', name: 'לקוחות', d: 'כרטיס אחד לכל לקוח: אנשי קשר עם תפקידים, מסמכים, היסטוריה.' },
   { id: 'documents', name: 'מסמכים', d: 'קליטה ממייל, וואטסאפ וסריקה. סיווג, תיוק ומעקב תוקף.' },
   { id: 'search', name: 'חיפוש', d: 'שאלה בעברית — תשובה עם ציטוט מעמוד וסעיף.' },
+  { id: 'alerts', name: 'התראות', d: 'דייג׳סט בוקר של שלושה דברים. לא יותר.' },
+  { id: 'portal', name: 'פורטל לקוחות', d: 'הלקוחות רואים מסמכים ומזמינים בעצמם.' },
   { id: 'billing', name: 'חיוב', d: 'חשבוניות ותקבולים, מחוברים למערכת שכבר יש לך.' },
-  { id: 'collections', name: 'גבייה', d: 'תעדוף לפי חריגה, סולם דחיפה, הבטחות תשלום.' },
+  { id: 'collections', name: 'גבייה', d: 'תעדוף לפי חריגה, תזכורות ולינקי תשלום.' },
   { id: 'retainers', name: 'ריטיינרים', d: 'תחזית שחיקה, תעריף שעה אפקטיבי, ראדאר חידושים.' },
   { id: 'catalog', name: 'קטלוג', d: 'מוצרים ומחירון נפרד לכל לקוח.' },
   { id: 'inventory', name: 'מלאי', d: 'מלאי זמין להבטחה, הקצאה, סנכרון ERP.' },
   { id: 'orders', name: 'הזמנות', d: 'עגלה, אשראי ותנאי תשלום, הזמנה חוזרת חכמה.' },
-  { id: 'portal', name: 'פורטל לקוחות', d: 'הלקוחות שלך מזמינים ורואים מסמכים לבד.' },
-  { id: 'alerts', name: 'התראות', d: 'דייג׳סט בוקר של שלושה דברים. לא יותר.' },
 ];
 
 function Modules() {
@@ -219,8 +293,8 @@ function Modules() {
             מרכיבים את המערכת שלך, לא קונים אותה שלמה
           </h2>
           <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
-            Bossi בנויה ממודולים שמתחברים. עורך דין מדליק מסמכים, ריטיינרים וגבייה.
-            יבואן מדליק קטלוג, מלאי, הזמנות ופורטל. אותה מערכת — הרכבה אחרת.
+            כולם מתחילים מאותו מקום — לקוחות, מסמכים וחיפוש. משם מדליקים רק את מה
+            שרלוונטי: עורך דין מוסיף ריטיינרים, יבואן מוסיף מלאי ופורטל.
           </p>
         </div>
 
@@ -241,17 +315,50 @@ function Modules() {
   );
 }
 
+/* ─────────────────────────────────────────────────────────── Money */
+
+function Money() {
+  return (
+    <section className="border-b border-hairline">
+      <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
+        <div className="max-w-2xl">
+          <p className="mb-4 text-[0.8rem] font-medium tracking-wide text-muted">מה שנגזר מזה</p>
+          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">
+            כשהמידע מסודר, גם הכסף מסתדר
+          </h2>
+          <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
+            זו לא הסיבה שתתחיל להשתמש ב-Bossi. זו הסיבה שתישאר.
+          </p>
+        </div>
+
+        <div className="mt-9 grid gap-x-10 gap-y-7 sm:grid-cols-3">
+          {[
+            { t: 'ריטיינר שלא נשחק', d: 'ב־15 לחודש: ״נוצלו 78%, בקצב הזה יסיים ב־156%״. וכמה באמת יצא לך לשעה' },
+            { t: 'חוב שלא נשכח', d: 'תעדוף לפי מי שחורג מהדפוס שלו, לא לפי גודל החוב. עם לינק תשלום' },
+            { t: 'תזכורת עם הראיות', d: 'החוזה ותעודת המשלוח מצורפים לבד — כי הם כבר על אותו ציר זמן' },
+          ].map((f) => (
+            <div key={f.t} className="border-t border-strong pt-4">
+              <h3 className="text-[1.02rem]">{f.t}</h3>
+              <p className="mt-1.5 text-[0.9rem] leading-relaxed text-secondary">{f.d}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ─────────────────────────────────────────────────────────── Pricing */
 
 function PricingSection() {
   return (
-    <section id="pricing" className="border-b border-hairline">
+    <section id="pricing" className="border-b border-hairline bg-sunken">
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
         <div className="max-w-2xl">
           <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">תמחור שנצמד למה שאתה באמת מפעיל</h2>
           <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
-            החבילה קובעת אילו מודולים דלוקים וכמה מותר לצרוך — אחסון, מסמכים, מיילים והודעות.
-            חריגה מחויבת לפי שימוש, בלי הפתעות ובלי חסימה פתאומית.
+            החבילה קובעת אילו מודולים דלוקים וכמה מותר לצרוך — אחסון, מסמכים, מיילים
+            והודעות. חריגה מחויבת לפי שימוש, בלי הפתעות ובלי חסימה פתאומית.
           </p>
         </div>
 
@@ -273,15 +380,15 @@ const TRUST = [
   { t: 'בידוד ברמת מסד הנתונים', d: 'כל שאילתה עוברת דרך מדיניות בידוד דיירים. לא הסתמכות על תנאי שנזכור לכתוב.' },
   { t: 'הפרדה מלאה בין צוות ללקוחות', d: 'משתמשי הפורטל חיים בעולם זהות נפרד. גישה אחת לא זולגת לשנייה.' },
   { t: 'תיעוד צפייה במסמכים', d: 'מי פתח, מה, ומתי. תשובה מלאה גם שנתיים אחרי.' },
-  { t: 'חישובי כסף בקוד, לא ב־AI', d: 'המודל מסווג ומנסח. יתרות, חריגות וסכומים מחושבים דטרמיניסטית ונבדקים.' },
+  { t: 'הידע נשאר בעסק', d: 'עובד עוזב — ההיסטוריה, המסמכים והסיכומים נשארים. לא בראש של אף אחד.' },
 ];
 
 function Trust() {
   return (
-    <section className="border-b border-hairline bg-sunken">
+    <section className="border-b border-hairline">
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
         <h2 className="max-w-xl text-[1.9rem] leading-tight sm:text-[2.3rem]">
-          אתה מפקיד אצלנו חוזים וכסף. זה מחייב.
+          אתה מפקיד אצלנו את הזיכרון של העסק. זה מחייב.
         </h2>
         <div className="mt-9 grid gap-x-10 gap-y-7 sm:grid-cols-2">
           {TRUST.map((t) => (
@@ -307,11 +414,11 @@ function Cta() {
           style={{ background: 'var(--surface-inverse)', color: 'var(--text-inverse)' }}
         >
           <h2 className="mx-auto max-w-2xl text-[1.8rem] leading-tight sm:text-[2.2rem]">
-            תן לנו שעה. נראה לך איפה הכסף שלך דולף.
+            תן לנו לקוח אחד. נראה לך את הכרטיס שלו.
           </h2>
           <p className="mx-auto mt-4 max-w-lg text-[1rem] leading-relaxed opacity-75">
-            הדגמה על הנתונים שלך — לא על דמו. אם לא נמצא לפחות דליפה אחת שאפשר לסתום,
-            נגיד לך את זה.
+            בחר לקוח, שלח לנו את מה שיש עליו — מיילים, קבצים, מה שתמצא. נבנה את
+            הכרטיס שלו ב-Bossi ותראה איך זה נראה כשהכול במקום אחד.
           </p>
           <a
             href="mailto:hello@bossi.co.il"
@@ -336,9 +443,10 @@ function Footer() {
         <nav className="flex flex-wrap gap-x-6 gap-y-2 text-[0.88rem] text-secondary">
           <a href="#problem">הבעיה</a>
           <a href="#how">איך זה עובד</a>
+          <a href="#dashboard">דשבורד</a>
+          <a href="#search">חיפוש</a>
           <a href="#modules">מודולים</a>
           <a href="#pricing">מחירים</a>
-          <a href="mailto:hello@bossi.co.il">צור קשר</a>
         </nav>
         <p className="text-xs text-muted">© {new Date().getFullYear()} Bossi</p>
       </div>
