@@ -167,3 +167,19 @@ export async function createUser(
   );
   return rows[0]!.id;
 }
+
+// ── מנוי ──────────────────────────────────────────────────────────────────
+
+export interface Subscription {
+  plan: 'starter' | 'pro' | 'mega';
+  status: string;
+  current_period_start: Date;
+  current_period_end: Date;
+}
+
+export async function currentSubscription(tx: Tx): Promise<Subscription | null> {
+  const { rows } = await tx.query<Subscription>(
+    `select plan, status, current_period_start, current_period_end from subscriptions`,
+  );
+  return rows[0] ?? null;
+}
