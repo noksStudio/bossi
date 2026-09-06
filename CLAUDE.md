@@ -1,0 +1,69 @@
+# Bossi — כללי עבודה
+
+מערכת הפעלה לעסק: לקוחות, ריטיינרים, מסמכים, חיפוש, פורטל B2B, התראות וגבייה.
+אפיון מלא ב-[docs/](docs/). החלטות ב-[docs/06-decisions.md](docs/06-decisions.md).
+
+## כללי ברזל (אסור לעבור עליהם בלי ADR חדש)
+
+1. **RLS על כל טבלה.** לכל טבלה `tenant_id` ומדיניות
+   `using (tenant_id = current_setting('app.tenant_id')::uuid)`.
+   כל בקשה פותחת טרנזקציה עם `set local app.tenant_id`.
+   בידוד דיירים לא נשען על `WHERE` שנזכור להוסיף.
+
+2. **שני realms של זהות.** `users` (צוות) ו-`portal_users` (לקוחות) הן טבלאות נפרדות,
+   עם טוקנים ב-audience נפרד ו-middleware נפרד. **לעולם לא למזג לתפקיד על טבלה אחת.**
+
+3. **AI לא מחשב כסף.** יתרות ריטיינר, סכומי חריגה, מחירים, מלאי, ריביות — קוד
+   דטרמיניסטי ב-`packages/core` עם בדיקות יחידה. מודל שפה מסווג, מחלץ ומנסח בלבד.
+
+4. **AI לא כותב ל-DB.** מחזיר `proposal` → ולידציה ב-zod → שכבת כתיבה. חילוץ מגיע
+   תמיד עם `confidence` ועם עוגן (`page`, `bbox`). מתחת לסף → תור אישור אנושי.
+
+5. **כל דבר שקורה נכתב ל-`events`.** ציר הזמן, ההתראות והאודיט הם צרכנים של הזרם.
+   `type` מ-taxonomy מתועד ([docs/02](docs/02-domain-model.md#taxonomy-של-אירועים-התחלה)).
+
+6. **`packages/core` לא יודע מה זה HTTP, Postgres או LLM.** פונקציות טהורות בלבד.
+   `core/shared` לא מייבא מ-`core/retainers` או מ-`core/commerce`.
+
+7. **RTL-first.** properties לוגיים (`margin-inline-start`, לא `margin-left`).
+   כל מסך נבדק בעברית לפני שנחשב גמור. טקסט מעורב עברית/מספרים/אנגלית הוא ברירת המחדל.
+
+8. **גל אחד בכל רגע.** בקשה מחוץ לגל הנוכחי נרשמת ב-issue ולא נבנית — גם אם היא קטנה.
+
+## סטאק
+
+Next.js (App Router) + TypeScript · Drizzle + Postgres 16 (pgvector, pg_trgm, pg-boss) ·
+Tailwind + Radix · zod · S3/R2 · Claude ל-AI.
+
+**בלי Redis, בלי vector DB נפרד, בלי מיקרו-שירותים.** להוסיף רק מול כאב מדוד.
+
+## מבנה
+
+```
+apps/web          אפליקציית העסק + פורטל (route group), worker
+packages/db       סכמה, מיגרציות, RLS, seed
+packages/core     לוגיקה עסקית טהורה: shared / retainers / commerce
+packages/events   taxonomy, publisher, consumers
+packages/ai       סיווג, חילוץ, חיפוש — עם evals
+packages/integrations  הנפקה, סליקה, WhatsApp, מייל נכנס, אחסון
+```
+
+## סדר עבודה למשימה
+
+`packages/core` (פונקציות + בדיקות) → סכמה ומיגרציה → שכבת נתונים → UI.
+הלוגיקה העסקית היא הדבר היחיד שיקר לתקן בדיעבד.
+
+## בדיקות — מה כן ומה לא
+
+**כן:** בדיקות יחידה על כל חישוב כספי ב-`core`; בדיקה שמנסה לקרוא דאטה של דייר אחר
+ונכשלת; evals ל-`packages/ai` (דיוק סיווג, F1 לחילוץ, recall@5 לחיפוש).
+
+**לא:** כיסוי מלא, בדיקות E2E על כל מסך, סנאפשוטים של UI.
+
+## תמיד
+
+- כסף ב-`numeric(14,2)`, לעולם לא `float`.
+- תאריכים ב-`timestamptz`. תצוגה באזור הזמן של הדייר.
+- כל לוג נושא `tenant_id`.
+- קבצים: signed URL קצר-מועד בלבד. אין bucket ציבורי.
+- מסמכים: hash לפני עיבוד — לא לשלם על OCR פעמיים לאותו קובץ.
