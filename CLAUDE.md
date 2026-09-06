@@ -30,6 +30,14 @@
 
 8. **גל אחד בכל רגע.** בקשה מחוץ לגל הנוכחי נרשמת ב-issue ולא נבנית — גם אם היא קטנה.
 
+9. **מודול לא מייבא מודול.** התקשורת היחידה היא פורטים (סינכרוני, מטופס) ואירועים
+   (אסינכרוני). הצטרפות ל-UI דרך `slots`, לא בעריכת מסך של מודול אחר.
+   ראה [docs/07](docs/07-module-platform.md). `pnpm check` אוכף את זה.
+
+10. **הקרנל לא גדל.** `packages/kernel` עומד על 602 שורות (451 ללא הערות).
+    התקרה: 800. חריגה = ADR חדש.
+    אין טעינה דינמית, אין sandboxing, אין גרסאות ל-API של מודול.
+
 ## סטאק
 
 Next.js (App Router) + TypeScript · Drizzle + Postgres 16 (pgvector, pg_trgm, pg-boss) ·
@@ -40,12 +48,20 @@ Tailwind + Radix · zod · S3/R2 · Claude ל-AI.
 ## מבנה
 
 ```
-apps/web          אפליקציית העסק + פורטל (route group), worker
-packages/db       סכמה, מיגרציות, RLS, seed
-packages/core     לוגיקה עסקית טהורה: shared / retainers / commerce
-packages/events   taxonomy, publisher, consumers
-packages/ai       סיווג, חילוץ, חיפוש — עם evals
+packages/kernel   ✅ מרשם המודולים: מניפסטים, פורטים, אירועים, slots, הרכבה פר-דייר
+packages/modules  ✅ מניפסטים ופורטים של עשרת המודולים
+packages/db          סכמה, מיגרציות, RLS, seed
+packages/core        לוגיקה עסקית טהורה, מפוצלת לפי מודול
+packages/ai          סיווג, חילוץ, חיפוש — עם evals
 packages/integrations  הנפקה, סליקה, WhatsApp, מייל נכנס, אחסון
+apps/web             אפליקציית העסק + פורטל (route group), worker
+```
+
+## פקודות
+
+```bash
+pnpm check              # typecheck + בדיקות + אימות המרשם
+pnpm modules services   # מה מקבל דייר עם החבילה הזו
 ```
 
 ## סדר עבודה למשימה
