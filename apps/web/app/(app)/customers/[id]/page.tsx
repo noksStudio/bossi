@@ -2,7 +2,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
-  asPrincipal, createNote, customerTimeline, deleteNote, getCustomerDetail, listDocuments, listNotes, publishEvent,
+  asPrincipal, checksForCustomer, createNote, customerTimeline, deleteNote, getCustomerDetail,
+  listDocuments, listLeases, listNotes, publishEvent,
 } from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
 import { loadShell, moduleName, moduleOf } from '@/lib/navigation';
@@ -11,6 +12,10 @@ import { Timeline } from '@/components/app/timeline';
 import { ContactList } from '@/components/app/contacts';
 import { DocumentRowItem } from '@/components/app/document-row';
 import { NotesPanel } from '@/components/app/notes-panel';
+import { LeaseCard } from '@/components/app/lease-card';
+import { CustomerChecks } from '@/components/app/customer-checks';
+import { CustomerTabs } from '@/components/app/customer-tabs';
+import { customerTabs } from '@/lib/customer-tabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,11 +50,20 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   ]);
   if (!detail) notFound();
 
-  const [events, documents, notes] = await Promise.all([
+  // כל מה שידוע על הלקוח, בשליפה אחת מקבילה. המודולים שאינם פעילים
+  // מחזירים ריק ולכן אין צורך בתנאים כאן.
+  const [events, documents, notes, checks, leases] = await Promise.all([
     asPrincipal(principal, (tx) => customerTimeline(tx, id, { limit: 40 })),
     asPrincipal(principal, (tx) => listDocuments(tx, { customerId: id, limit: 12 })),
     asPrincipal(principal, (tx) => listNotes(tx, { customerId: id })),
+    shell.modules.includes('checks')
+      ? asPrincipal(principal, (tx) => checksForCustomer(tx, id))
+      : Promise.resolve([]),
+    shell.modules.includes('leases')
+      ? asPrincipal(principal, (tx) => listLeases(tx, { customerId: id }))
+      : Promise.resolve([]),
   ]);
+  const activeLease = leases.find((l) => l.status === 'active') ?? leases[0];
 
   async function addNote(formData: FormData) {
     'use server';
@@ -73,7 +87,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     await asPrincipal(principal, (tx) => deleteNote(tx, String(formData.get('id'))));
     revalidatePath(`/customers/${id}`);
   }
-  const tabs = shell.slots('customer.tabs');
+  const tabs = customerTabs(shell.slots('customer.tabs'), id);
   const cards = shell.slots('customer.overview.cards');
   const status = STATUS[detail.status] ?? { label: detail.status, tone: 'neutral' as const };
 
@@ -112,27 +126,16 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </div>
       </header>
 
-      {/* לשוניות שמודולים תרמו. הלשונית הראשונה תמיד קיימת — היא של הקרנל. */}
-      <div className="flex flex-wrap gap-1 border-b border-hairline">
-        <span
-          className="border-b-2 px-3 pb-2 text-[0.88rem] font-medium"
-          style={{ borderColor: 'var(--accent)' }}
-        >
-          סקירה
-        </span>
-        {tabs.map((tab) => (
-          <span
-            key={tab.id}
-            className="cursor-not-allowed px-3 pb-2 text-[0.88rem] text-muted"
-            title={`${moduleName(moduleOf(tab.id))} — נבנה בספרינט הקרוב`}
-          >
-            {tab.label ?? tab.id}
-          </span>
-        ))}
-      </div>
+      <CustomerTabs tabs={tabs} customerId={id} active="overview" />
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
+          <CustomerChecks
+            checks={checks}
+            notes={notes}
+            href={`/customers/${id}/checks`}
+          />
+
           <section className="overflow-hidden rounded-lg border border-hairline">
             <header className="flex items-baseline justify-between border-b border-hairline px-4 py-3">
               <h2 className="text-[1rem]">מסמכים</h2>
@@ -159,12 +162,19 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
         </div>
 
         <div className="space-y-6">
+          {activeLease ? <LeaseCard lease={activeLease} /> : null}
+
           <section className="rounded-lg border border-hairline p-4">
             <h2 className="mb-1 text-[0.95rem]">אנשי קשר</h2>
             <ContactList contacts={detail.contacts} />
           </section>
 
-          <NotesPanel notes={notes} role={principal.role} onAdd={addNote} onDelete={removeNote} />
+          <NotesPanel
+            notes={notes.filter((n) => n.subject_type !== 'check')}
+            role={principal.role}
+            onAdd={addNote}
+            onDelete={removeNote}
+          />
 
           {detail.tags.length > 0 ? (
             <section className="rounded-lg border border-hairline p-4">
@@ -191,8 +201,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             </section>
           ) : null}
 
-          {/* מקומות ששמורים על ידי מודולים פעילים ועוד לא מולאו */}
-          {cards.map((card) => (
+          {/* מקומות ששמורים על ידי מודולים פעילים ועוד לא מולאו.
+              תרומה שכבר נבנתה מסוננת כאן — אחרת הכרטיס מופיע פעמיים,
+              פעם אמיתי ופעם כמסגרת מקווקוות. */}
+          {cards.filter((c) => !BUILT_CARDS.has(c.id)).map((card) => (
             <section key={card.id} className="rounded-lg border border-dashed border-hairline p-4">
               <div className="flex items-baseline justify-between gap-3">
                 <h2 className="text-[0.95rem]">{card.label ?? card.id}</h2>
@@ -208,6 +220,9 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
     </div>
   );
 }
+
+/** תרומות slot שכבר יש להן מימוש אמיתי בעמוד הזה. */
+const BUILT_CARDS = new Set(['leases.card', 'checks.open_card']);
 
 /** עברית לא סופרת כמו אנגלית: "1 אירועים" נשמע שבור. */
 function countLabel(n: number): string {

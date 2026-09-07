@@ -74,11 +74,22 @@ function PayloadDetails({ payload }: { payload: Record<string, unknown> }) {
       {entries.map(([k, v]) => (
         <div key={k} className="flex gap-1.5">
           <dt className="text-muted">{FIELD_LABELS[k] ?? k}</dt>
-          <dd>{String(v)}</dd>
+          <dd className={MONEY_FIELDS.has(k) ? 'tnum' : undefined}>{formatValue(k, v)}</dd>
         </div>
       ))}
     </dl>
   );
+}
+
+const MONEY_FIELDS = new Set(['amount', 'rent', 'deposit']);
+
+/** סכום גולמי כמו `8700` נקרא כמספר סידורי. עם פסיק ושקל הוא נקרא ככסף. */
+function formatValue(key: string, value: unknown): string {
+  if (MONEY_FIELDS.has(key)) {
+    const n = Number(value);
+    if (Number.isFinite(n)) return `${new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 }).format(n)} ₪`;
+  }
+  return String(value);
 }
 
 const FIELD_LABELS: Record<string, string> = {

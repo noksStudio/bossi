@@ -62,7 +62,13 @@ export async function overdueChecks(tx: Tx, before?: string): Promise<CheckRow[]
   return rows;
 }
 
-export async function checksForCustomer(tx: Tx, customerId: string, limit = 24): Promise<CheckRow[]> {
+/**
+ * כל הצ'קים של לקוח, מהחדש לישן.
+ *
+ * ללא הגבלה כברירת מחדל: התמונה המלאה של השוכר היא הנקודה, וחבילה
+ * של 24 צ'קים לשנתיים אינה עומס.
+ */
+export async function checksForCustomer(tx: Tx, customerId: string, limit = 500): Promise<CheckRow[]> {
   const { rows } = await tx.query<CheckRow>(
     `${SELECT} where k.customer_id = $1 order by k.due_on desc limit $2`,
     [customerId, limit],
