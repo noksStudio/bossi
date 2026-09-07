@@ -1,6 +1,6 @@
 import { createRegistry, PLANS, type PlanId } from '@bossi/modules';
 import { asPrincipal, currentSubscription, enabledModules, type Principal } from '@bossi/db';
-import type { NavEntry, SlotContribution, SlotId } from '@bossi/kernel';
+import type { EventDef, NavEntry, SlotContribution, SlotId } from '@bossi/kernel';
 
 /**
  * הניווט נבנה מההרכבה של הדייר, לא מקובץ קבוע.
@@ -18,6 +18,8 @@ export interface TenantShell {
   autoAdded: string[];
   nav: NavEntry[];
   slots: (slot: SlotId) => SlotContribution[];
+  /** האירועים שהמודולים הפעילים מכריזים עליהם — ציר הזמן מתרגם דרכם. */
+  eventCatalog: EventDef[];
   plan: PlanId;
 }
 
@@ -38,6 +40,7 @@ export async function loadShell(principal: Principal): Promise<TenantShell> {
     autoAdded: composition.autoAdded,
     nav: composition.nav.filter((n) => (n.realm ?? 'staff') === 'staff'),
     slots: (slot) => composition.slots.get(slot) ?? [],
+    eventCatalog: composition.eventCatalog,
     plan: subscription?.plan ?? 'starter',
   };
 }

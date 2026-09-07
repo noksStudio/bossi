@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { BossiMark } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { CommandPalette } from '@/components/app/command-palette';
 import { requirePrincipal } from '@/lib/session';
 import { loadShell } from '@/lib/navigation';
 
@@ -74,6 +75,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         <main className="min-w-0 flex-1 p-5 lg:p-7">{children}</main>
       </div>
+
+      <CommandPalette />
     </div>
   );
 }
