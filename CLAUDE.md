@@ -13,6 +13,10 @@
 1א. **כל FK אל ישות של דייר הוא מורכב וכולל `tenant_id`.** בדיקת FK מתעלמת
    מ-RLS, ולכן FK פשוט מאפשר הצבעה חוצת־דיירים. ראה [ADR-005](docs/06-decisions.md).
 
+1ב. **`withPrincipal` ולא `withTenant` בכל מסלול משתמש.** הזהות והתפקיד
+   מגיעים למסד כ-GUC, ומדיניות RESTRICTIVE אוכפת פעולות הרסניות שם.
+   הקשר בלי משתמש נכשל סגור. `withTenant` נשאר לעבודות רקע ו-seed.
+
 2. **שני realms של זהות.** `users` (צוות) ו-`portal_users` (לקוחות) הן טבלאות נפרדות,
    עם טוקנים ב-audience נפרד ו-middleware נפרד. **לעולם לא למזג לתפקיד על טבלה אחת.**
 
@@ -57,7 +61,7 @@ Drizzle ייכנס דרך `drizzle-kit pull` כשמשטח השאילתות יצ�
 packages/kernel   ✅ מרשם המודולים: מניפסטים, פורטים, אירועים, slots, הרכבה פר-דייר
 packages/modules  ✅ מניפסטים, פורטים, חבילות ומכסות
 packages/db       ✅ מיגרציות, RLS, שכבת שאילתות, אירועים, seed
-packages/core        לוגיקה עסקית טהורה, מפוצלת לפי מודול
+packages/core     ✅ לוגיקה עסקית טהורה: כסף, הרשאות, התאמת צ׳קים, ראדאר חוזים
 packages/ai          סיווג, חילוץ, חיפוש — עם evals
 packages/integrations  הנפקה, סליקה, WhatsApp, מייל נכנס, אחסון
 apps/web             אפליקציית העסק + פורטל (route group), worker

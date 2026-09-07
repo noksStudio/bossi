@@ -1,12 +1,16 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { asPrincipal, customerTimeline, getCustomerDetail, listDocuments } from '@bossi/db';
+import { revalidatePath } from 'next/cache';
+import {
+  asPrincipal, createNote, customerTimeline, deleteNote, getCustomerDetail, listDocuments, listNotes, publishEvent,
+} from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
 import { loadShell, moduleName, moduleOf } from '@/lib/navigation';
 import { StatusPill } from '@/components/site/chrome';
 import { Timeline } from '@/components/app/timeline';
 import { ContactList } from '@/components/app/contacts';
 import { DocumentRowItem } from '@/components/app/document-row';
+import { NotesPanel } from '@/components/app/notes-panel';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,10 +45,34 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   ]);
   if (!detail) notFound();
 
-  const [events, documents] = await Promise.all([
+  const [events, documents, notes] = await Promise.all([
     asPrincipal(principal, (tx) => customerTimeline(tx, id, { limit: 40 })),
     asPrincipal(principal, (tx) => listDocuments(tx, { customerId: id, limit: 12 })),
+    asPrincipal(principal, (tx) => listNotes(tx, { customerId: id })),
   ]);
+
+  async function addNote(formData: FormData) {
+    'use server';
+    const principal = await requirePrincipal();
+    const body = String(formData.get('body') ?? '').trim();
+    if (!body) return;
+    await asPrincipal(principal, async (tx) => {
+      await createNote(tx, { body, customerId: id, pinned: formData.get('pinned') === '1' });
+      await publishEvent(tx, {
+        type: 'kernel.note_added', actorType: 'user', actorId: principal.userId, customerId: id, payload: {},
+      });
+    });
+    revalidatePath(`/customers/${id}`);
+  }
+
+  async function removeNote(formData: FormData) {
+    'use server';
+    const principal = await requirePrincipal();
+    // אין בדיקת תפקיד כאן בכוונה: המדיניות במסד היא זו שעוצרת,
+    // ולכן גם קריאה שעוקפת את הממשק תיכשל.
+    await asPrincipal(principal, (tx) => deleteNote(tx, String(formData.get('id'))));
+    revalidatePath(`/customers/${id}`);
+  }
   const tabs = shell.slots('customer.tabs');
   const cards = shell.slots('customer.overview.cards');
   const status = STATUS[detail.status] ?? { label: detail.status, tone: 'neutral' as const };
@@ -135,6 +163,8 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
             <h2 className="mb-1 text-[0.95rem]">אנשי קשר</h2>
             <ContactList contacts={detail.contacts} />
           </section>
+
+          <NotesPanel notes={notes} role={principal.role} onAdd={addNote} onDelete={removeNote} />
 
           {detail.tags.length > 0 ? (
             <section className="rounded-lg border border-hairline p-4">

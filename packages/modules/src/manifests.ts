@@ -3,7 +3,10 @@ import { z } from 'zod';
 import {
   AlertsPort,
   AvailabilityPort,
+  ChecksPort,
   DocumentsPort,
+  LeasesPort,
+  SigningPort,
   EntitlementsPort,
   InvoicingPort,
   PricingPort,
@@ -398,6 +401,120 @@ export const metering: ModuleManifest = {
   tables: ['subscriptions', 'usage_events', 'usage_rollups', 'billing_cycles'],
 };
 
+
+// ══════════════════════════════════════════════════════════ צ'קים דחויים
+
+/**
+ * פנקס צ'קים דחויים והתאמה חודשית.
+ *
+ * נפוץ הרבה מעבר לנדל"ן — כל עסק ישראלי שמקבל צ'קים לשנה מראש — ולכן
+ * זה מודול עצמאי ולא חלק מ-`leases`.
+ */
+export const checks: ModuleManifest = {
+  id: 'checks',
+  name: 'צ׳קים',
+  description: 'פנקס צ׳קים דחויים, התאמה חודשית מול הבנק ומעקב פירעונות חלקיים.',
+  category: 'money',
+  enhances: ['leases', 'collections'],
+  provides: [{ port: ChecksPort, factory: () => stubPort(ChecksPort) }],
+  emits: [
+    defineEvent('checks.batch_received', 'התקבלה חבילת צ׳קים'),
+    defineEvent('checks.cleared', 'צ׳ק נפרע ואומת מול הבנק'),
+    defineEvent('checks.partial', 'צ׳ק נפרע חלקית — נותרה יתרה'),
+    defineEvent('checks.bounced', 'צ׳ק חזר'),
+    defineEvent('checks.overdue', 'צ׳ק עבר את מועד הפירעון ולא אומת'),
+    defineEvent('checks.voided', 'צ׳ק בוטל'),
+  ],
+  nav: [{ id: 'checks', label: 'צ׳קים', href: '/checks', order: 35, realm: 'staff' }],
+  slots: [
+    { slot: 'dashboard.widgets', id: 'checks.month', label: 'צ׳קים לפירעון החודש', order: 8 },
+    { slot: 'customer.tabs', id: 'checks.tab', label: 'צ׳קים', order: 28 },
+    { slot: 'customer.overview.cards', id: 'checks.open_card', label: 'צ׳קים פתוחים', order: 8 },
+  ],
+  jobs: [{ id: 'checks.overdue_scan', schedule: '0 5 * * *', description: 'סימון צ׳קים שעברו מועד' }],
+  permissions: ['checks.read', 'checks.mark', 'checks.write'],
+  settings: z.object({
+    defaultLocation: z.string().default('כספת המשרד'),
+    remindDaysBefore: z.number().int().min(0).default(2),
+  }),
+  tables: ['checks', 'check_batches'],
+};
+
+// ══════════════════════════════════════════════════════════ שכירות
+
+export const leases: ModuleManifest = {
+  id: 'leases',
+  name: 'שכירות',
+  description: 'נכסים, חוזי שכירות וראדאר חידושים לפי מועד ההודעה המוקדמת.',
+  category: 'money',
+  enhances: ['documents', 'signing', 'checks'],
+  provides: [{ port: LeasesPort, factory: () => stubPort(LeasesPort) }],
+  emits: [
+    defineEvent('leases.signed', 'נחתם חוזה שכירות'),
+    defineEvent('leases.notice_due', 'מתקרב מועד ההודעה המוקדמת על סיום או חידוש'),
+    defineEvent('leases.notice_passed', 'מועד ההודעה המוקדמת חלף'),
+    defineEvent('leases.ending', 'החוזה מסתיים בקרוב'),
+    defineEvent('leases.ended', 'החוזה הסתיים'),
+    defineEvent('leases.renewed', 'החוזה חודש'),
+  ],
+  nav: [
+    { id: 'leases', label: 'חוזי שכירות', href: '/leases', order: 30, realm: 'staff' },
+    { id: 'properties', label: 'נכסים', href: '/properties', order: 31, realm: 'staff' },
+  ],
+  slots: [
+    { slot: 'dashboard.widgets', id: 'leases.renewal_radar', label: 'חוזים לקראת סיום', order: 12 },
+    { slot: 'customer.tabs', id: 'leases.tab', label: 'חוזה', order: 12 },
+    { slot: 'customer.overview.cards', id: 'leases.card', label: 'החוזה הפעיל', order: 6 },
+  ],
+  jobs: [{ id: 'leases.renewal_scan', schedule: '0 6 * * *', description: 'סריקת מועדי הודעה מוקדמת' }],
+  permissions: ['leases.read', 'leases.write'],
+  settings: z.object({
+    defaultNoticeDays: z.number().int().min(0).max(365).default(90),
+    alertBeforeNoticeDays: z.number().int().min(0).default(30),
+  }),
+  tables: ['properties', 'leases'],
+};
+
+// ══════════════════════════════════════════════════════════ החתמה
+
+/**
+ * החתמה בקישור. עצמאי מ-`leases` בכוונה — הצעת מחיר, הסכם עבודה
+ * ואישור מסירה זקוקים לאותו דבר בדיוק.
+ *
+ * החותם אינו משתמש במערכת ואינו משתמש פורטל: הוא אדם חיצוני שמחזיק
+ * קישור חד-פעמי. זהו עולם גישה שלישי, מבודד משני האחרים.
+ */
+export const signing: ModuleManifest = {
+  id: 'signing',
+  name: 'החתמה',
+  description: 'שליחת מסמך לחתימה בקישור, עם אימות SMS ונתיב ביקורת מלא.',
+  category: 'documents',
+  requires: ['documents'],
+  consumes: [DocumentsPort],
+  provides: [{ port: SigningPort, factory: () => stubPort(SigningPort) }],
+  emits: [
+    defineEvent('signing.sent', 'נשלח מסמך לחתימה'),
+    defineEvent('signing.viewed', 'החותם פתח את המסמך'),
+    defineEvent('signing.signed', 'המסמך נחתם'),
+    defineEvent('signing.declined', 'החותם סירב לחתום'),
+    defineEvent('signing.expired', 'קישור החתימה פג'),
+    defineEvent('signing.reminded', 'נשלחה תזכורת לחתימה'),
+  ],
+  nav: [{ id: 'signing', label: 'החתמות', href: '/signing', order: 22, realm: 'staff' }],
+  slots: [
+    { slot: 'dashboard.widgets', id: 'signing.pending', label: 'ממתין לחתימה', order: 15 },
+    { slot: 'customer.actions', id: 'signing.send', label: 'שלח לחתימה', order: 5 },
+  ],
+  jobs: [{ id: 'signing.reminder_scan', schedule: '0 9 * * 0-4', description: 'תזכורת למי שלא חתם' }],
+  permissions: ['signing.read', 'signing.send', 'signing.void'],
+  settings: z.object({
+    linkTtlDays: z.number().int().min(1).max(90).default(14),
+    requireOtp: z.boolean().default(true),
+    reminderAfterDays: z.number().int().min(1).default(3),
+  }),
+  tables: ['signing_requests', 'signing_events'],
+};
+
 export const ALL_MODULES = [
   documents,
   search,
@@ -410,4 +527,7 @@ export const ALL_MODULES = [
   portal,
   alerts,
   metering,
+  checks,
+  leases,
+  signing,
 ] satisfies ModuleManifest[];

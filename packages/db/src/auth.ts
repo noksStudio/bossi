@@ -1,5 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { withPlatform, withTenant, type Tx } from './client';
+import { withPlatform, withPrincipal, type Tx } from './client';
 
 /**
  * שכבת האימות. עולם הצוות בלבד — משתמשי פורטל יקבלו שכבה נפרדת
@@ -183,12 +183,17 @@ export async function purgeExpired(): Promise<number> {
 
 /**
  * מריץ עבודה בהקשר של המשתמש המחובר.
- * זו הדרך היחידה שקוד של מסך ניגש למסד: הזהות מגיעה מהעוגייה,
- * ולא מפרמטר שהדפדפן יכול לשלוט בו.
+ *
+ * זו הדרך היחידה שקוד של מסך ניגש למסד: הזהות מגיעה מהעוגייה ולא
+ * מפרמטר שהדפדפן שולט בו, והיא מועברת למסד — כך שגם ההרשאות נאכפות
+ * שם ולא רק בממשק.
  */
 export async function asPrincipal<T>(
   principal: Principal,
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
-  return withTenant(principal.tenantId, fn);
+  return withPrincipal(
+    { tenantId: principal.tenantId, userId: principal.userId, role: principal.role },
+    fn,
+  );
 }

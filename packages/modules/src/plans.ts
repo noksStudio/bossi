@@ -131,6 +131,7 @@ export const PLANS: Record<PlanId, Plan> = {
     modules: [
       'documents', 'search', 'billing', 'collections', 'retainers',
       'catalog', 'inventory', 'orders', 'portal', 'alerts', 'metering',
+      'checks', 'leases', 'signing',
     ],
     quotas: {
       storage_gb: q(750, 5),
@@ -150,6 +151,7 @@ export const PLANS: Record<PlanId, Plan> = {
       'פורטל הזמנות עם עגלה',
       'הזמנה חוזרת חכמה',
       'סנכרון מול ERP',
+      'צ׳קים דחויים, חוזי שכירות והחתמה בקישור',
     ],
   },
 };

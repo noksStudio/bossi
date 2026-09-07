@@ -26,6 +26,12 @@ export const PRESETS = {
     'metering',
   ],
 
+  /** נדל״ן להשכרה — נכסים, חוזים, צ׳קים דחויים והחתמה. */
+  realestate: [
+    'documents', 'search', 'signing', 'billing', 'collections',
+    'leases', 'checks', 'alerts', 'metering',
+  ],
+
   /** הכול. */
   full: [
     'documents',
@@ -39,6 +45,9 @@ export const PRESETS = {
     'portal',
     'alerts',
     'metering',
+    'checks',
+    'leases',
+    'signing',
   ],
 } satisfies Record<string, ModuleId[]>;
 

@@ -79,6 +79,41 @@ export async function withTenant<T>(
 }
 
 /**
+ * כמו `withTenant`, ובנוסף מעביר את **מי** מבצע את הפעולה.
+ *
+ * בלי זה המסד יודע איזה דייר פועל אבל לא מי בתוכו, וכללי הרשאה כמו
+ * "רק הבעלים מוחק הערות" נאכפים בקוד ה-UI בלבד — כלומר לא נאכפים.
+ * מדיניות RESTRICTIVE במיגרציה 0007 נשענת על שני ה-GUC האלה.
+ *
+ * הקשר ללא משתמש (עבודות רקע, seed) משאיר אותם ריקים, ולכן כל מדיניות
+ * שנשענת על התפקיד נכשלת סגור.
+ */
+export async function withPrincipal<T>(
+  principal: { tenantId: string; userId: string; role: string },
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T> {
+  if (!UUID_RE.test(principal.tenantId)) throw new Error(`מזהה דייר לא תקין: ${principal.tenantId}`);
+  if (!UUID_RE.test(principal.userId)) throw new Error(`מזהה משתמש לא תקין: ${principal.userId}`);
+
+  const client = await getPool().connect();
+  try {
+    await client.query('begin');
+    await client.query('set local role bossi_app');
+    await client.query('select set_config($1, $2, true)', ['app.tenant_id', principal.tenantId]);
+    await client.query('select set_config($1, $2, true)', ['app.user_id', principal.userId]);
+    await client.query('select set_config($1, $2, true)', ['app.user_role', principal.role]);
+    const result = await fn(client);
+    await client.query('commit');
+    return result;
+  } catch (error) {
+    await client.query('rollback').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * עוקף את בידוד הדיירים. מיועד ליצירת דיירים, מיגרציות ו-seed בלבד.
  *
  * אם אתם קוראים לזה בתוך טיפול בבקשת משתמש — כמעט בוודאות זו טעות.

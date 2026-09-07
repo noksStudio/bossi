@@ -30,6 +30,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@bossi/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@bossi/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -65,8 +68,13 @@ importers:
         specifier: ^4.0.0
         version: 4.3.3
 
+  packages/core: {}
+
   packages/db:
     dependencies:
+      '@bossi/core':
+        specifier: workspace:*
+        version: link:../core
       '@bossi/kernel':
         specifier: workspace:*
         version: link:../kernel

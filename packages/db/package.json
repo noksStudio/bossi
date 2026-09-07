@@ -19,7 +19,8 @@
     "@bossi/kernel": "workspace:*",
     "@bossi/modules": "workspace:*",
     "drizzle-orm": "^0.38.3",
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "@bossi/core": "workspace:*"
   },
   "devDependencies": {
     "@types/pg": "^8.11.10",

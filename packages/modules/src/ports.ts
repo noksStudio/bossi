@@ -115,3 +115,42 @@ export interface Usage {
   current(): Promise<Record<string, number>>;
 }
 export const UsagePort = definePort<Usage>('metering.usage');
+
+// -------------------------------------------------------------- שכירות וצ'קים
+
+export interface LeaseSummary {
+  id: string;
+  customerId: string;
+  propertyName: string;
+  endsOn: string;
+  noticeDeadline: string;
+  monthlyRent: string;
+}
+export interface Leases {
+  activeFor(customerId: string): Promise<LeaseSummary[]>;
+  /** חוזים שדורשים החלטה, לפי מועד ההודעה המוקדמת ולא לפי תאריך הסיום. */
+  needingDecision(withinDays: number): Promise<LeaseSummary[]>;
+}
+export const LeasesPort = definePort<Leases>('leases.repository');
+
+export interface Checks {
+  /** מה שאמור להיפרע בטווח, למסך ההתאמה החודשית. */
+  dueBetween(from: string, to: string): Promise<Array<{ id: string; customerId: string; amount: string; dueOn: string; status: string }>>;
+  /** מה שעבר תאריך ולא סומן — ממשיך לצוף גם אחרי גלגול החודש. */
+  overdue(): Promise<Array<{ id: string; customerId: string; amount: string; dueOn: string }>>;
+}
+export const ChecksPort = definePort<Checks>('checks.register');
+
+export interface SigningRequest {
+  documentId: string;
+  customerId: string;
+  signerName: string;
+  signerPhone?: string;
+  signerEmail?: string;
+}
+export interface Signing {
+  /** מחזיר קישור חד-פעמי לחתימה. החותם אינו משתמש במערכת. */
+  request(input: SigningRequest): Promise<{ requestId: string; url: string; expiresAt: Date }>;
+  status(requestId: string): Promise<'sent' | 'viewed' | 'signed' | 'expired' | 'declined'>;
+}
+export const SigningPort = definePort<Signing>('signing.requests');

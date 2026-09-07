@@ -8,6 +8,9 @@
       "path": "packages/modules"
     },
     {
+      "path": "packages/core"
+    },
+    {
       "path": "packages/db"
     }
   ]
