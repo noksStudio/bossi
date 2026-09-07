@@ -5,11 +5,15 @@
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
     "migrate": "tsx src/cli/migrate.ts",
     "seed": "tsx src/cli/seed.ts",
-    "reset": "tsx src/cli/reset.ts"
+    "reset": "tsx src/cli/reset.ts",
+    "demo": "tsx src/cli/demo.ts",
+    "demo:reset": "tsx src/cli/demo.ts --reset"
   },
   "dependencies": {
     "@bossi/kernel": "workspace:*",

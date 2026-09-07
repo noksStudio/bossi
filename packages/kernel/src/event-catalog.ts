@@ -19,6 +19,7 @@ export const KERNEL_EVENTS: EventDef[] = [
   defineEvent('kernel.contact_added', 'נוסף איש קשר'),
   defineEvent('kernel.contact_removed', 'איש קשר הוסר'),
   defineEvent('kernel.note_added', 'נרשמה הערה'),
+  defineEvent('kernel.demo_session_started', 'נפתחה ישיבת הדגמה'),
 ];
 
 /** תרגום סוג אירוע לתיאור קריא. `null` כשהסוג אינו מוכר. */

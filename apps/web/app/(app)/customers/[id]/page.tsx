@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { asPrincipal, customerTimeline, getCustomerDetail } from '@bossi/db';
+import { asPrincipal, customerTimeline, getCustomerDetail, listDocuments } from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
 import { loadShell, moduleName, moduleOf } from '@/lib/navigation';
 import { StatusPill } from '@/components/site/chrome';
 import { Timeline } from '@/components/app/timeline';
 import { ContactList } from '@/components/app/contacts';
+import { DocumentRowItem } from '@/components/app/document-row';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +41,10 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
   ]);
   if (!detail) notFound();
 
-  const events = await asPrincipal(principal, (tx) => customerTimeline(tx, id, { limit: 40 }));
+  const [events, documents] = await Promise.all([
+    asPrincipal(principal, (tx) => customerTimeline(tx, id, { limit: 40 })),
+    asPrincipal(principal, (tx) => listDocuments(tx, { customerId: id, limit: 12 })),
+  ]);
   const tabs = shell.slots('customer.tabs');
   const cards = shell.slots('customer.overview.cards');
   const status = STATUS[detail.status] ?? { label: detail.status, tone: 'neutral' as const };
@@ -101,6 +105,24 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
 
       <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="space-y-6">
+          <section className="overflow-hidden rounded-lg border border-hairline">
+            <header className="flex items-baseline justify-between border-b border-hairline px-4 py-3">
+              <h2 className="text-[1rem]">מסמכים</h2>
+              <Link href={`/documents?q=`} className="text-[0.78rem] text-muted hover:text-primary">
+                כל המסמכים
+              </Link>
+            </header>
+            {documents.length === 0 ? (
+              <p className="px-4 py-6 text-[0.88rem] text-muted">אין עדיין מסמכים ללקוח הזה.</p>
+            ) : (
+              <ul className="divide-y divide-hairline">
+                {documents.map((d) => (
+                  <DocumentRowItem key={d.id} doc={d} showCustomer={false} />
+                ))}
+              </ul>
+            )}
+          </section>
+
           <section>
             <h2 className="mb-1 text-[1.02rem]">ציר הזמן</h2>
             <p className="mb-4 text-[0.8rem] text-muted">{countLabel(detail.event_count)}</p>

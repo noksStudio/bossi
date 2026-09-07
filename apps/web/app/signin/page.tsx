@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { requestLogin } from '@bossi/db';
+import { demoTenants, requestLogin } from '@bossi/db';
 import { BossiWordmark } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { currentPrincipal } from '@/lib/session';
@@ -7,6 +7,11 @@ import { currentPrincipal } from '@/lib/session';
 export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'כניסה' };
+
+const DEMO_LABELS: Record<string, string> = {
+  'demo-lavi': 'דמו — משרד עורכי דין',
+  'demo-tavor': 'דמו — יבואן B2B',
+};
 
 /**
  * התחברות בקישור חד-פעמי. אין סיסמאות — אין מה לגנוב, אין מה למחזר,
@@ -19,6 +24,7 @@ export default async function SignInPage({
 }) {
   if (await currentPrincipal()) redirect('/dashboard');
   const params = await searchParams;
+  const demos = demoTenants();
 
   async function submit(formData: FormData) {
     'use server';
@@ -109,6 +115,23 @@ export default async function SignInPage({
                   שלח קישור כניסה
                 </button>
               </form>
+
+              {demos.length > 0 ? (
+                <div className="mt-8 border-t border-hairline pt-6">
+                  <p className="text-[0.8rem] text-muted">או היכנס לסביבת הדגמה עם נתונים לדוגמה:</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {demos.map((slug) => (
+                      <a
+                        key={slug}
+                        href={`/api/auth/demo?t=${encodeURIComponent(slug)}`}
+                        className="rounded-md border border-strong px-3.5 py-2 text-[0.85rem]"
+                      >
+                        {DEMO_LABELS[slug] ?? slug}
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </>
           )}
         </div>

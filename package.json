@@ -13,7 +13,9 @@
     "build": "pnpm --filter @bossi/web build",
     "db:migrate": "pnpm --filter @bossi/db migrate",
     "db:seed": "pnpm --filter @bossi/db seed",
-    "db:reset": "pnpm --filter @bossi/db reset"
+    "db:reset": "pnpm --filter @bossi/db reset",
+    "demo": "pnpm --filter @bossi/db demo",
+    "demo:reset": "pnpm --filter @bossi/db demo:reset"
   },
   "dependencies": {
     "@bossi/kernel": "workspace:*",

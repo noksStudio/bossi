@@ -133,6 +133,43 @@ export async function resolveSession(sessionToken: string): Promise<Principal | 
   };
 }
 
+/**
+ * חיבור דמו. הרשימה המותרת מגיעה מהסביבה, והמסד בודק שוב שהדייר
+ * אכן מסומן כדמו — שני מנעולים בלתי תלויים.
+ */
+export async function createDemoSession(slug: string): Promise<SessionCreated | null> {
+  const allowed = (process.env['DEMO_TENANT_SLUGS'] ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!allowed.includes(slug)) return null;
+
+  const token = newToken();
+  const row = await withPlatform(async (tx) => {
+    const { rows } = await tx.query<{ tenant_id: string; user_id: string }>(
+      'select * from auth_demo_session($1, $2)',
+      [slug, hash(token)],
+    );
+    return rows[0] ?? null;
+  });
+
+  if (!row) return null;
+  return {
+    token,
+    tenantId: row.tenant_id,
+    userId: row.user_id,
+    expiresAt: new Date(Date.now() + 12 * 3_600_000),
+  };
+}
+
+/** הדיירים שמותר להיכנס אליהם כדמו. ריק = כניסת הדמו כבויה. */
+export function demoTenants(): string[] {
+  return (process.env['DEMO_TENANT_SLUGS'] ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 export async function revokeSession(sessionToken: string): Promise<void> {
   await withPlatform((tx) => tx.query('select auth_revoke_session($1)', [hash(sessionToken)]));
 }
