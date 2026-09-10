@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { DocumentRow } from '@bossi/db';
+import { DocumentCheckbox } from '@/components/app/document-selection';
 import { StatusPill } from '@/components/site/chrome';
 import { daysUntil, docTypeLabel, expiryTone, formatDate, sourceLabel } from '@/lib/documents';
 
@@ -9,6 +10,7 @@ export function DocumentRowItem({ doc, showCustomer = true }: { doc: DocumentRow
 
   return (
     <li className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 py-3 transition-colors hover:bg-sunken">
+      <DocumentCheckbox id={doc.id} title={doc.title} />
       <DocIcon />
       <div className="min-w-0 flex-1">
         <Link href={`/documents/${doc.id}`} className="text-[0.9rem] hover:underline">

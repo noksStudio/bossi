@@ -6,6 +6,7 @@ import { loadShell } from '@/lib/navigation';
 import { customerTabs } from '@/lib/customer-tabs';
 import { CustomerTabs } from '@/components/app/customer-tabs';
 import { DocumentRowItem } from '@/components/app/document-row';
+import { DocumentSelectionProvider } from '@/components/app/document-selection';
 import { DocumentUpload } from '@/components/app/document-upload';
 
 export const dynamic = 'force-dynamic';
@@ -29,37 +30,39 @@ export default async function CustomerDocumentsPage({ params }: { params: Promis
   if (!customer) notFound();
 
   return (
-    <div className="space-y-6">
-      <nav className="text-[0.8rem] text-muted">
-        <Link href="/customers" className="hover:text-primary">לקוחות</Link>
-        <span className="mx-1.5" aria-hidden="true">/</span>
-        <Link href={`/customers/${id}`} className="hover:text-primary">{customer.display_name}</Link>
-        <span className="mx-1.5" aria-hidden="true">/</span>
-        <span>מסמכים</span>
-      </nav>
+    <DocumentSelectionProvider>
+      <div className="space-y-6">
+        <nav className="text-[0.8rem] text-muted">
+          <Link href="/customers" className="hover:text-primary">לקוחות</Link>
+          <span className="mx-1.5" aria-hidden="true">/</span>
+          <Link href={`/customers/${id}`} className="hover:text-primary">{customer.display_name}</Link>
+          <span className="mx-1.5" aria-hidden="true">/</span>
+          <span>מסמכים</span>
+        </nav>
 
-      <h1 className="text-[1.5rem]">{customer.display_name} · מסמכים</h1>
+        <h1 className="text-[1.5rem]">{customer.display_name} · מסמכים</h1>
 
-      <CustomerTabs tabs={customerTabs(shell.slots('customer.tabs'), id)} customerId={id} active="documents.tab" />
+        <CustomerTabs tabs={customerTabs(shell.slots('customer.tabs'), id)} customerId={id} active="documents.tab" />
 
-      <DocumentUpload customerId={id} />
+        <DocumentUpload customerId={id} />
 
-      {documents.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-strong p-10 text-center">
-          <h2 className="text-[1.02rem]">אין מסמכים ללקוח הזה</h2>
-        </div>
-      ) : (
-        <div className="overflow-hidden rounded-lg border border-hairline">
-          <div className="border-b border-hairline bg-sunken px-4 py-2 text-[0.76rem] text-muted">
-            {documents.length === 1 ? 'מסמך אחד' : `${documents.length} מסמכים`}
+        {documents.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-strong p-10 text-center">
+            <h2 className="text-[1.02rem]">אין מסמכים ללקוח הזה</h2>
           </div>
-          <ul className="divide-y divide-hairline">
-            {documents.map((d) => (
-              <DocumentRowItem key={d.id} doc={d} showCustomer={false} />
-            ))}
-          </ul>
-        </div>
-      )}
-    </div>
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-hairline">
+            <div className="border-b border-hairline bg-sunken px-4 py-2 text-[0.76rem] text-muted">
+              {documents.length === 1 ? 'מסמך אחד' : `${documents.length} מסמכים`}
+            </div>
+            <ul className="divide-y divide-hairline">
+              {documents.map((d) => (
+                <DocumentRowItem key={d.id} doc={d} showCustomer={false} />
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </DocumentSelectionProvider>
   );
 }
