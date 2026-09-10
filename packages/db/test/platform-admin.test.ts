@@ -1,59 +1,44 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
-  adminCredentials, closePool, hashPassword, migrate, recordAudit,
-  resolvePlatformSession, signInPlatform, signOutPlatform, verifyPassword, withPlatform,
+  adminCredentials, closePool, migrate, recordAudit,
+  resolvePlatformSession, signInPlatform, signOutPlatform, withPlatform,
 } from '../src/index';
 
 /**
  * הריאלם השלישי. הבדיקות כאן שואלות דבר אחד: **האם הדלת נסגרת.**
+ *
+ * הסיסמה יושבת בסביבה כמות שהיא ולא כ-hash (ADR-009) — הבדיקות כאן
+ * לא בודקות גיבוב אלא את מה שכן קיים: השוואה מדויקת, הגבלת קצב,
+ * וניתוק מיידי כשהסביבה משתנה.
  */
 
 const hasDb = Boolean(process.env['DATABASE_URL']);
 const PASSWORD = 'correct-horse-battery-staple';
 const EMAIL = 'admin@bossi.test';
 
-describe('גיבוב סיסמה', () => {
-  it('אותה סיסמה מייצרת hash שונה בכל פעם', async () => {
-    const a = await hashPassword(PASSWORD);
-    const b = await hashPassword(PASSWORD);
-    expect(a).not.toBe(b);          // מלח אקראי
-    expect(await verifyPassword(PASSWORD, a)).toBe(true);
-    expect(await verifyPassword(PASSWORD, b)).toBe(true);
-  });
-
-  it('סיסמה שגויה נדחית', async () => {
-    const stored = await hashPassword(PASSWORD);
-    expect(await verifyPassword('correct-horse-battery-stapl', stored)).toBe(false);
-    expect(await verifyPassword('', stored)).toBe(false);
-  });
-
-  it('hash פגום נדחה ולא זורק', async () => {
-    for (const bad of ['', 'nonsense', 'scrypt$only-two', 'bcrypt$a$b', 'scrypt$$', 'scrypt$YQ$YQ']) {
-      expect(await verifyPassword(PASSWORD, bad), bad).toBe(false);
-    }
-  });
-
-  it('נורמליזציית יוניקוד — אותה סיסמה בעברית עוברת בשתי הצורות', async () => {
-    const stored = await hashPassword('סיסמה־חזקה־מאוד');
-    expect(await verifyPassword('סיסמה־חזקה־מאוד'.normalize('NFD'), stored)).toBe(true);
-  });
-});
-
 describe('הקונסולה כבויה כברירת מחדל', () => {
   it('בלי משתני סביבה אין אדמין בכלל', () => {
     delete process.env['PLATFORM_ADMIN_EMAIL'];
-    delete process.env['PLATFORM_ADMIN_PASSWORD_HASH'];
+    delete process.env['PLATFORM_ADMIN_PASSWORD'];
     expect(adminCredentials()).toBeNull();
   });
 
   it('משתנה אחד בלבד אינו מספיק', () => {
     process.env['PLATFORM_ADMIN_EMAIL'] = EMAIL;
-    delete process.env['PLATFORM_ADMIN_PASSWORD_HASH'];
+    delete process.env['PLATFORM_ADMIN_PASSWORD'];
     expect(adminCredentials()).toBeNull();
 
     delete process.env['PLATFORM_ADMIN_EMAIL'];
-    process.env['PLATFORM_ADMIN_PASSWORD_HASH'] = 'scrypt$a$b';
+    process.env['PLATFORM_ADMIN_PASSWORD'] = PASSWORD;
     expect(adminCredentials()).toBeNull();
+  });
+
+  it('הסיסמה בסביבה נקראת כמות שהיא — רק הכתובת נחתכת', () => {
+    process.env['PLATFORM_ADMIN_EMAIL'] = `  ${EMAIL}  `;
+    process.env['PLATFORM_ADMIN_PASSWORD'] = ` ${PASSWORD} `;
+    expect(adminCredentials()).toEqual({ email: EMAIL, password: ` ${PASSWORD} ` });
+    delete process.env['PLATFORM_ADMIN_EMAIL'];
+    delete process.env['PLATFORM_ADMIN_PASSWORD'];
   });
 });
 
@@ -61,7 +46,7 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
   beforeAll(async () => {
     await migrate(() => {});
     process.env['PLATFORM_ADMIN_EMAIL'] = EMAIL;
-    process.env['PLATFORM_ADMIN_PASSWORD_HASH'] = await hashPassword(PASSWORD);
+    process.env['PLATFORM_ADMIN_PASSWORD'] = PASSWORD;
   }, 30_000);
 
   beforeEach(async () => {
@@ -77,7 +62,7 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
 
   afterAll(async () => {
     delete process.env['PLATFORM_ADMIN_EMAIL'];
-    delete process.env['PLATFORM_ADMIN_PASSWORD_HASH'];
+    delete process.env['PLATFORM_ADMIN_PASSWORD'];
     await closePool();
   });
 
@@ -92,6 +77,13 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
 
   it('סיסמה שגויה אינה פותחת דבר', async () => {
     const result = await signInPlatform({ email: EMAIL, password: 'wrong', ip: '2.2.2.2' });
+    expect(result).toEqual({ ok: false, reason: 'bad_credentials' });
+  });
+
+  it('סיסמה קרובה אך לא זהה נדחית', async () => {
+    const result = await signInPlatform({
+      email: EMAIL, password: PASSWORD.slice(0, -1), ip: '2.2.2.3',
+    });
     expect(result).toEqual({ ok: false, reason: 'bad_credentials' });
   });
 
@@ -155,10 +147,10 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
     const result = await signInPlatform({ email: EMAIL, password: PASSWORD, ip: '10.10.10.10' });
     if (!result.ok) throw new Error('ההתחברות נכשלה');
 
-    const saved = process.env['PLATFORM_ADMIN_PASSWORD_HASH'];
-    delete process.env['PLATFORM_ADMIN_PASSWORD_HASH'];
+    const saved = process.env['PLATFORM_ADMIN_PASSWORD'];
+    delete process.env['PLATFORM_ADMIN_PASSWORD'];
     expect(await resolvePlatformSession(result.token)).toBeNull();
-    process.env['PLATFORM_ADMIN_PASSWORD_HASH'] = saved;
+    process.env['PLATFORM_ADMIN_PASSWORD'] = saved;
   });
 
   it('התיעוד אינו ניתן לשינוי או למחיקה — גם מנתיב הפלטפורמה', async () => {

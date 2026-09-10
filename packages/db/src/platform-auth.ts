@@ -1,40 +1,26 @@
-import { createHash, randomBytes, scrypt as scryptCb, timingSafeEqual } from 'node:crypto';
-import { promisify } from 'node:util';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { withPlatform } from './client';
 
 /**
  * אימות אדמין הפלטפורמה — הריאלם השלישי.
  *
- * זהו הנתיב היחיד במערכת שמשתמש בסיסמה. הצוות נכנס בקישור חד-פעמי כי
- * אין שם מה לגנוב; כאן אין למי לשלוח קישור, כי האדמין אינו רשומה במסד
- * אלא הגדרה בסביבה.
+ * **הסיסמה יושבת בסביבה כמות שהיא, לא כ-hash** (ADR-009, מחליף בנקודה
+ * הזו את ADR-008). הכרעה מודעת: ל-`PLATFORM_ADMIN_PASSWORD` ב-Vercel
+ * יש בדיוק את אותה רמת אמון כמו ל-`DATABASE_URL` שכבר יושב שם — מי
+ * שרואה את אחד רואה את השני, ולכן גיבוב לא סוגר דלת אמיתית מול מי
+ * שכבר יש לו גישה ל-Environment Variables. מה שגיבוב היה מונע — ניחוש
+ * מרחוק אחרי דליפה — מכוסה כאן בהגבלת הקצב, לא בגיבוב.
  *
- * שלושה דברים שסיסמה מחייבת ושקישור לא:
+ * שני דברים שסיסמה עדיין מחייבת, ושקישור חד-פעמי (עולם הצוות) לא:
  *
- *   · **scrypt ולא SHA.** גיבוב מהיר הופך דליפה של ה-hash לניחוש של
- *     שניות. scrypt יקר בזיכרון ובזמן במכוון.
  *   · **הגבלת קצב.** קישור חד-פעמי אי אפשר לנחש; סיסמה כן. חמישה
  *     כשלונות מאותו IP נועלים לרבע שעה.
  *   · **השוואה בזמן קבוע**, כדי שזמן התגובה לא יסגיר כמה תווים נכונים.
  */
 
-/**
- * `promisify` לא מצליח לבחור את הגרסה עם אפשרויות מתוך העומסים של
- * `scrypt`, ולכן העטיפה מפורשת. חתימה מפורשת עדיפה כאן על `any`.
- */
-const scrypt = promisify(scryptCb) as (
-  password: string,
-  salt: Buffer,
-  keylen: number,
-  options: { N: number; r: number; p: number },
-) => Promise<Buffer>;
-
 const SESSION_TTL_HOURS = 8;
 const LOCKOUT_ATTEMPTS = 5;
 const LOCKOUT_MINUTES = 15;
-
-/** פרמטרי scrypt. N=16384 הוא ~50ms — כבד מספיק לתוקף, זניח למשתמש. */
-const SCRYPT = { N: 16_384, r: 8, p: 1, keylen: 32 } as const;
 
 export interface PlatformAdmin {
   email: string;
@@ -42,47 +28,11 @@ export interface PlatformAdmin {
   realm: 'platform';
 }
 
-// ── סיסמאות ───────────────────────────────────────────────────────────────
-
-/**
- * מייצר `scrypt$<salt>$<hash>` — הפורמט שנכנס ל-ENV.
- *
- * המלח נשמר בתוך המחרוזת ולא בנפרד: משתנה סביבה אחד קל להעתיק נכון,
- * ושניים קל להעתיק חצי.
- */
-export async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16);
-  const key = await scrypt(password.normalize('NFKC'), salt, SCRYPT.keylen, SCRYPT);
-  return `scrypt$${salt.toString('base64url')}$${key.toString('base64url')}`;
-}
-
-/**
- * מאמת סיסמה מול ה-hash שב-ENV.
- *
- * מחזיר false על כל תקלה — פורמט שגוי, hash חסר, אורך לא תואם — ולעולם
- * לא זורק. שגיאה שמתפרשת כהצלחה היא בדיוק סוג הבאג שפותח דלת.
- */
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
-  const parts = stored.split('$');
-  if (parts.length !== 3 || parts[0] !== 'scrypt') return false;
-
-  const salt = Buffer.from(parts[1]!, 'base64url');
-  const expected = Buffer.from(parts[2]!, 'base64url');
-  if (salt.length === 0 || expected.length !== SCRYPT.keylen) return false;
-
-  try {
-    const key = await scrypt(password.normalize('NFKC'), salt, SCRYPT.keylen, SCRYPT);
-    return timingSafeEqual(key, expected);
-  } catch {
-    return false;
-  }
-}
-
 // ── ההגדרה שבסביבה ────────────────────────────────────────────────────────
 
 export interface AdminCredentials {
   email: string;
-  passwordHash: string;
+  password: string;
 }
 
 /**
@@ -90,12 +40,15 @@ export interface AdminCredentials {
  * וכל נתיב תחתיה מחזיר 404.
  *
  * זו נקודת הכיבוי: מחיקת שני המשתנים סוגרת את הדלת בלי לפרוס קוד.
+ *
+ * הסיסמה **אינה** נחתכת — רק הכתובת. סיסמה שהוזנה עם רווח בקצה
+ * ב-Vercel צריכה להיכשל בהתחברות באותה נאמנות, לא להצליח בשקט.
  */
 export function adminCredentials(): AdminCredentials | null {
   const email = process.env['PLATFORM_ADMIN_EMAIL']?.trim();
-  const passwordHash = process.env['PLATFORM_ADMIN_PASSWORD_HASH']?.trim();
-  if (!email || !passwordHash) return null;
-  return { email, passwordHash };
+  const password = process.env['PLATFORM_ADMIN_PASSWORD'];
+  if (!email || !password) return null;
+  return { email, password };
 }
 
 // ── התחברות ───────────────────────────────────────────────────────────────
@@ -120,7 +73,7 @@ export async function signInPlatform(input: {
   // שתי הבדיקות רצות תמיד ובאותו סדר: יציאה מוקדמת על כתובת שגויה
   // מסגירה דרך זמן התגובה איזו כתובת נכונה.
   const emailOk = safeEqual(input.email.trim().toLowerCase(), credentials.email.toLowerCase());
-  const passwordOk = await verifyPassword(input.password, credentials.passwordHash);
+  const passwordOk = safeEqual(input.password.normalize('NFKC'), credentials.password.normalize('NFKC'));
 
   if (!emailOk || !passwordOk) {
     await recordAudit({
