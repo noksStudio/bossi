@@ -6,6 +6,7 @@ import { createCheck, createCheckBatch } from '../checks';
 import { createLease, createProperty } from '../leases';
 import { createNote } from '../notes';
 import { publishEvent } from '../events';
+import { seedBilling, seedSigning, type SeedCustomer } from './business';
 
 /**
  * דייר הדגמה לראובן מסיקה — יזם נדל"ן.
@@ -236,6 +237,55 @@ export async function seedRealEstate(log: (m: string) => void = console.log): Pr
         }
       }
     }
+
+    // ── דמי ניהול וחיובים נלווים ────────────────────────────────────────
+    //
+    // השכירות עצמה נגבית בצ'קים, ולכן החשבוניות כאן הן מה שבאמת מגיע
+    // בנפרד: דמי ועד, תיקונים שקוזזו, והתחשבנות סוף שנה. זה גם מה
+    // שממלא את מסך הגבייה — שוכר שלא מחזיר על תיקון הוא בדיוק התיק
+    // שנשכח בין הצ'קים.
+    const { rows: tenantRows } = await tx.query<{ id: string; display_name: string }>(
+      'select id, display_name from customers order by created_at limit 12',
+    );
+    const seedCustomers: SeedCustomer[] = tenantRows.map((r) => ({
+      id: r.id, name: r.display_name, terms: 14, tags: [],
+    }));
+    await seedBilling(tx, seedCustomers, {
+      prefix: 'מס',
+      base: 1180,
+      random,
+      subjects: [
+        'דמי ועד בית — רבעון',
+        'החזר תיקון אינסטלציה',
+        'התחשבנות ארנונה',
+        'החזר תיקון מזגן',
+        'ניקיון וצביעה בסיום חוזה',
+        'הפרשי הצמדה למדד',
+      ],
+    });
+
+    // ── החתמות ──────────────────────────────────────────────────────────
+    const { rows: signTargets } = await tx.query<{
+      id: string; display_name: string; phone: string | null; email: string | null; doc_id: string | null;
+    }>(
+      `select c.id, c.display_name,
+              (select ct.phone from contacts ct where ct.customer_id = c.id limit 1) as phone,
+              (select ct.email from contacts ct where ct.customer_id = c.id limit 1) as email,
+              (select d.id from documents d where d.customer_id = c.id and d.doc_type = 'contract' limit 1) as doc_id
+         from customers c order by c.created_at limit 8`,
+    );
+    await seedSigning(
+      tx,
+      signTargets.map((t, i) => ({
+        customerId: t.id,
+        customerName: t.display_name,
+        title: i % 3 === 1 ? `נספח הארכה לחוזה שכירות — ${t.display_name}` : `חוזה שכירות — ${t.display_name}`,
+        phone: t.phone,
+        email: t.email,
+        documentId: t.doc_id,
+      })),
+      { random },
+    );
 
     // כמה רישומים כלליים בתיקיות, מהסוג שראובן באמת כותב
     const { rows: some } = await tx.query<{ id: string }>('select id from customers limit 4');

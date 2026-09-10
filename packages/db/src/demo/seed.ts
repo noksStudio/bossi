@@ -1,8 +1,11 @@
-import { PLANS } from '@bossi/modules';
-import { createTenant, withPlatform, withTenant, type Tx } from '../client';
+import { PRESETS, type ModuleId } from '@bossi/kernel';
+import { createTenant, withPlatform, withPrincipal, withTenant, type Tx } from '../client';
 import { createContact, createCustomer, createUser, updateCustomer } from '../repositories';
 import { createDocument } from '../documents';
 import { publishEvent } from '../events';
+import {
+  seedBilling, seedCommerce, seedPortalUsers, seedRetainers, type SeedCustomer,
+} from './business';
 import {
   COMMERCE_CUSTOMERS,
   CORRESPONDENCE_SUBJECTS,
@@ -66,10 +69,14 @@ async function seedTenant(
     name: string;
     businessId: string;
     plan: 'pro' | 'mega';
+    modules: readonly ModuleId[];
     ownerEmail: string;
     ownerName: string;
     staff: Array<{ email: string; name: string; role: string }>;
     customers: DemoCustomer[];
+    invoicePrefix: string;
+    invoiceBase: number;
+    invoiceSubjects: string[];
     seed: number;
   },
   log: (m: string) => void,
@@ -82,7 +89,7 @@ async function seedTenant(
     slug: opts.slug,
     name: opts.name,
     plan: opts.plan,
-    modules: PLANS[opts.plan].modules,
+    modules: opts.modules,
     businessId: opts.businessId,
   });
   await withPlatform((tx) => tx.query('update tenants set is_demo = true where id = $1', [tenantId]));
@@ -91,9 +98,12 @@ async function seedTenant(
   let events = 0;
   let docNumber = 1000 + between(100, 400);
 
+  let ownerId = '';
+  const staffIds: string[] = [];
+
   await withTenant(tenantId, async (tx) => {
-    await createUser(tx, { email: opts.ownerEmail, name: opts.ownerName, role: 'owner' });
-    for (const s of opts.staff) await createUser(tx, s);
+    ownerId = await createUser(tx, { email: opts.ownerEmail, name: opts.ownerName, role: 'owner' });
+    for (const s of opts.staff) staffIds.push(await createUser(tx, s));
 
     for (const c of opts.customers) {
       // לקוח ותיק נפתח מזמן; ליד נפתח לאחרונה.
@@ -216,8 +226,62 @@ async function seedTenant(
   documents += highlights.documents;
   events += highlights.events;
 
-  log(`  ✓ ${opts.name}: ${opts.customers.length} לקוחות · ${documents} מסמכים · ${events} אירועים`);
+  // ── הכסף והמסחר ────────────────────────────────────────────────────────
+  //
+  // רץ תחת `withPrincipal` ולא `withTenant`: תקבול, הבטחת תשלום ואישור
+  // הזמנה נושאים "מי עשה את זה", וההקשר הוא מה שמספק את התשובה. seed
+  // שכותב אותם בלי זהות מייצר בדיוק את החורים שהמסך אמור למלא.
+  const principal = { tenantId, userId: ownerId, role: 'owner' };
+  const extra = await withPrincipal(principal, async (tx) => {
+    const { rows } = await tx.query<{ id: string; display_name: string; payment_terms_days: number; tags: string[] }>(
+      `select id, display_name, payment_terms_days, tags from customers
+        where status <> 'prospect' order by created_at`,
+    );
+    const seedCustomers: SeedCustomer[] = rows.map((r) => ({
+      id: r.id, name: r.display_name, terms: r.payment_terms_days, tags: r.tags,
+    }));
+
+    const money = await seedBilling(tx, seedCustomers, {
+      prefix: opts.invoicePrefix,
+      base: opts.invoiceBase,
+      random,
+      subjects: opts.invoiceSubjects,
+    });
+
+    const retainers = opts.modules.includes('retainers')
+      ? await seedRetainers(tx, seedCustomers, { random, userIds: [ownerId, ...staffIds] })
+      : 0;
+
+    const commerce = opts.modules.includes('catalog')
+      ? await seedCommerce(tx, seedCustomers, { random })
+      : { products: 0, orders: 0 };
+
+    const portalUsers = opts.modules.includes('portal')
+      ? await seedPortalUsers(tx, seedCustomers, {
+          random,
+          permissions: opts.modules.includes('orders')
+            ? ['documents.read', 'invoices.read', 'orders.read', 'orders.place']
+            : ['documents.read', 'invoices.read'],
+        })
+      : 0;
+
+    return { ...money, retainers, ...commerce, portalUsers };
+  });
+
+  log(
+    `  ✓ ${opts.name}: ${opts.customers.length} לקוחות · ${documents} מסמכים · ` +
+      `${extra.invoices} חשבוניות · ${describeExtras(extra)}${events} אירועים`,
+  );
   return { tenantId, customers: opts.customers.length, documents, events };
+}
+
+function describeExtras(e: { retainers: number; products: number; orders: number; portalUsers: number }): string {
+  const parts: string[] = [];
+  if (e.retainers) parts.push(`${e.retainers} ריטיינרים`);
+  if (e.products) parts.push(`${e.products} מוצרים`);
+  if (e.orders) parts.push(`${e.orders} הזמנות`);
+  if (e.portalUsers) parts.push(`${e.portalUsers} משתמשי פורטל`);
+  return parts.length ? `${parts.join(' · ')} · ` : '';
 }
 
 /** מסמכים חיים שפגים בשבועות הקרובים, וקליטה של הימים האחרונים. */
@@ -341,6 +405,9 @@ export async function seedDemo(log: (m: string) => void = console.log): Promise<
       name: 'לביא ושות׳ — משרד עורכי דין',
       businessId: '514872910',
       plan: 'pro',
+      // ההרכבה נקבעת מפורשות ולא נגזרת מהחבילה: משרד עורכי דין לא
+      // מנהל מלאי, וסעיף בתפריט שמוביל למסך ריק גרוע מסעיף שאינו קיים.
+      modules: PRESETS.services.concat('portal'),
       ownerEmail: 'demo@bossi.co.il',
       ownerName: 'נעה לביא',
       staff: [
@@ -348,6 +415,18 @@ export async function seedDemo(log: (m: string) => void = console.log): Promise<
         { email: 'books@demo-lavi.co.il', name: 'אבי שרון', role: 'bookkeeper' },
       ],
       customers: SERVICES_CUSTOMERS,
+      invoicePrefix: 'חש',
+      invoiceBase: 2140,
+      invoiceSubjects: [
+        'ריטיינר חודשי — ייעוץ משפטי שוטף',
+        'ליווי עסקת מקרקעין',
+        'הכנת הסכם מייסדים',
+        'ייצוג בהליך גישור',
+        'בדיקת נאותות — רכישת פעילות',
+        'טיפול בתביעה כספית',
+        'רישום סימן מסחר',
+        'הסכמי עבודה ונספחי סודיות',
+      ],
       seed: 20260907,
     },
     log,
@@ -359,10 +438,21 @@ export async function seedDemo(log: (m: string) => void = console.log): Promise<
       name: 'תבור אספקה טכנית',
       businessId: '512440817',
       plan: 'mega',
+      modules: PRESETS.commerce,
       ownerEmail: 'demo-b2b@bossi.co.il',
       ownerName: 'יוסי תבור',
       staff: [{ email: 'orders@demo-tavor.co.il', name: 'לילך אדרי', role: 'staff' }],
       customers: COMMERCE_CUSTOMERS,
+      invoicePrefix: 'ח',
+      invoiceBase: 8310,
+      invoiceSubjects: [
+        'אספקת ברגים וחיזוקים',
+        'הזמנת תאורת LED',
+        'ציוד חשמל — הזמנה חודשית',
+        'סוללות וממירים',
+        'חומרי קירור',
+        'כלי עבודה ובטיחות',
+      ],
       seed: 987654321,
     },
     log,
