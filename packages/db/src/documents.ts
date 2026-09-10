@@ -112,22 +112,25 @@ export async function createDocument(
     amount?: string | null;
     byteSize?: number | null;
     mime?: string;
+    contentHash?: string | null;
     createdAt?: Date;
   },
 ): Promise<string> {
   const { rows } = await tx.query<{ id: string }>(
     `insert into documents
-       (tenant_id, customer_id, title, filename, storage_key, doc_type, doc_type_confidence,
-        source, status, issued_on, expires_on, amount, byte_size, mime, created_at)
+       (tenant_id, customer_id, title, filename, storage_key, content_hash, doc_type,
+        doc_type_confidence, source, status, issued_on, expires_on, amount, byte_size,
+        mime, created_at)
      values (current_tenant(), $1, $2, $3, $4, $5, $6,
-             coalesce($7, 'upload'), coalesce($8, 'filed'), $9, $10, $11, $12,
-             coalesce($13, 'application/pdf'), coalesce($14, now()))
+             $7, coalesce($8, 'upload'), coalesce($9, 'filed'), $10, $11, $12, $13,
+             coalesce($14, 'application/pdf'), coalesce($15, now()))
      returning id`,
     [
       input.customerId ?? null,
       input.title,
       input.filename,
       input.storageKey,
+      input.contentHash ?? null,
       input.docType ?? null,
       input.confidence ?? null,
       input.source ?? null,
@@ -141,6 +144,16 @@ export async function createDocument(
     ],
   );
   return rows[0]!.id;
+}
+
+/**
+ * מסמך קיים עם אותו תוכן בדיוק — hash לפני עיבוד (CLAUDE.md "תמיד").
+ * משמש לייבוא: קובץ שכבר הועלה פעם לא נכתב שוב לאחסון, רק השורה
+ * החדשה מצביעה על אותו `storage_key`.
+ */
+export async function findDocumentByHash(tx: Tx, contentHash: string): Promise<DocumentRow | null> {
+  const { rows } = await tx.query<DocumentRow>(`${SELECT} where d.content_hash = $1 limit 1`, [contentHash]);
+  return rows[0] ?? null;
 }
 
 /** מסמכים חיים שתוקפם עומד לפוג — מזין את "דורש תשומת לב". */

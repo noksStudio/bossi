@@ -11,6 +11,7 @@
   "dependencies": {
     "@bossi/core": "workspace:*",
     "@bossi/db": "workspace:*",
+    "@bossi/integrations": "workspace:*",
     "@bossi/kernel": "workspace:*",
     "@bossi/modules": "workspace:*",
     "lucide-react": "^1.44.0",

@@ -37,7 +37,7 @@ export default async function SharedDocumentPage({ params }: { params: Promise<{
 }
 
 function SharedDocument({ share }: { share: NonNullable<Awaited<ReturnType<typeof resolveShareToken>>> }) {
-  const url = documentUrl(share.storageKey);
+  const url = documentUrl(share.storageKey, share.mime);
   const embedUrl = url ? `${url}#toolbar=0&navpanes=0&view=Fit` : null;
 
   return (

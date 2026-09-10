@@ -1,11 +1,14 @@
 import { DOC_TYPES, SOURCES } from '@bossi/db';
+import { signFileUrl } from './file-signing';
 
 /**
- * מפתחות דמו מוגשים מקבצים סטטיים; מפתחות אמיתיים ייפתרו ל-signed URL
- * קצר-מועד מול R2 בספרינט 4. `null` = אין קובץ להציג.
+ * מפתחות דמו מוגשים מקבצים סטטיים; מפתחות `local:` (העלאות אמיתיות)
+ * נפתרים לקישור חתום קצר-מועד דרך `/api/files` — ראו ADR-013.
+ * `null` = אין קובץ להציג (מפתח לא מוכר, או שאין קובץ בכלל).
  */
-export function documentUrl(storageKey: string): string | null {
+export function documentUrl(storageKey: string, mime = 'application/pdf'): string | null {
   if (storageKey.startsWith('demo:')) return `/demo/${storageKey.slice(5)}`;
+  if (storageKey.startsWith('local:')) return signFileUrl(storageKey.slice(6), mime);
   return null;
 }
 

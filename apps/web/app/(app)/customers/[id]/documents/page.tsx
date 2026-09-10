@@ -6,6 +6,7 @@ import { loadShell } from '@/lib/navigation';
 import { customerTabs } from '@/lib/customer-tabs';
 import { CustomerTabs } from '@/components/app/customer-tabs';
 import { DocumentRowItem } from '@/components/app/document-row';
+import { DocumentUpload } from '@/components/app/document-upload';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,8 @@ export default async function CustomerDocumentsPage({ params }: { params: Promis
       <h1 className="text-[1.5rem]">{customer.display_name} · מסמכים</h1>
 
       <CustomerTabs tabs={customerTabs(shell.slots('customer.tabs'), id)} customerId={id} active="documents.tab" />
+
+      <DocumentUpload customerId={id} />
 
       {documents.length === 0 ? (
         <div className="rounded-lg border border-dashed border-strong p-10 text-center">

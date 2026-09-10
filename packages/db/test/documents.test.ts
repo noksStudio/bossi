@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   closePool, createCustomer, createDemoSession, createTenant, createDocument,
-  documentStats, expiringDocuments, getDocument, listDocuments, migrate,
+  documentStats, expiringDocuments, findDocumentByHash, getDocument, listDocuments, migrate,
   quietCustomers, recentIntake, search, withPlatform, withTenant,
 } from '../src/index';
 
@@ -90,6 +90,34 @@ describe.skipIf(!hasDb)('מסמכים', () => {
   it('לקוח בלי אירועים נחשב נשכח', async () => {
     const quiet = await withTenant(alpha, (tx) => quietCustomers(tx, 60));
     expect(quiet.map((c) => c.display_name)).toContain('דני כהן — סטודיו');
+  });
+
+  it('findDocumentByHash מוצאת מסמך קיים לפי תוכן, לא לפי שם', async () => {
+    const hash = 'abc123-fake-sha256';
+    const id = await withTenant(alpha, (tx) =>
+      createDocument(tx, {
+        title: 'קובץ ראשון', filename: 'a.pdf', storageKey: 'local:x/a.pdf', contentHash: hash,
+      }),
+    );
+
+    const found = await withTenant(alpha, (tx) => findDocumentByHash(tx, hash));
+    expect(found?.id).toBe(id);
+
+    // שם קובץ אחר לגמרי, אותו תוכן — עדיין נמצא, כי ההשוואה היא על ה-hash.
+    expect(await withTenant(alpha, (tx) => findDocumentByHash(tx, hash))).not.toBeNull();
+  });
+
+  it('findDocumentByHash לא חוצה דיירים', async () => {
+    const hash = 'shared-content-hash';
+    await withTenant(alpha, (tx) =>
+      createDocument(tx, { title: 'של א', filename: 'a.pdf', storageKey: 'local:x/a.pdf', contentHash: hash }),
+    );
+    // אותו hash בדיוק אצל דייר אחר — לא אמור להימצא כשמחפשים בהקשר של ב׳.
+    expect(await withTenant(beta, (tx) => findDocumentByHash(tx, hash))).toBeNull();
+  });
+
+  it('hash שלא קיים מחזיר null', async () => {
+    expect(await withTenant(alpha, (tx) => findDocumentByHash(tx, 'no-such-hash'))).toBeNull();
   });
 });
 

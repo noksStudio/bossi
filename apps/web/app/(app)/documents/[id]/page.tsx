@@ -23,7 +23,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const doc = await asPrincipal(principal, (tx) => getDocument(tx, id));
   if (!doc) notFound();
 
-  const url = documentUrl(doc.storage_key);
+  const url = documentUrl(doc.storage_key, doc.mime);
   // מסתיר את סרגל הכלים ואת חלונית הדפים של מציג ה-PDF, ומתאים לרוחב —
   // בלי זה המסמך מוצג זעיר בתוך ממשק של הדפדפן.
   const embedUrl = url ? `${url}#toolbar=0&navpanes=0&view=Fit` : null;

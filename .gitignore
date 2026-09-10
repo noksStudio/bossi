@@ -8,3 +8,5 @@ coverage/
 pnpm-lock.yaml.bak
 .vercel
 next-env.d.ts
+.data/
+.tmp-storage-test-*/

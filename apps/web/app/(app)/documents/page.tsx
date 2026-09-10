@@ -1,6 +1,7 @@
 import { asPrincipal, DOC_TYPES, documentStats, listDocuments, SOURCES } from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
 import { DocumentRowItem } from '@/components/app/document-row';
+import { DocumentUpload } from '@/components/app/document-upload';
 import { StatTile } from '@/components/site/chrome';
 
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,8 @@ export default async function DocumentsPage({
         <StatTile label="ממתינים לאישור" value={String(stats.needs_review)} href="/documents?status=needs_review" />
         <StatTile label="תוקף פג בקרוב" value={String(stats.expiring_soon)} note="60 יום" href="/documents?expiring=1" />
       </div>
+
+      <DocumentUpload />
 
       <form className="flex flex-wrap gap-2.5">
         <input

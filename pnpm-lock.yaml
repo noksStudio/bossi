@@ -36,6 +36,9 @@ importers:
       '@bossi/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@bossi/integrations':
+        specifier: workspace:*
+        version: link:../../packages/integrations
       '@bossi/kernel':
         specifier: workspace:*
         version: link:../../packages/kernel
@@ -97,6 +100,8 @@ importers:
       tsx:
         specifier: ^4.19.2
         version: 4.23.13
+
+  packages/integrations: {}
 
   packages/kernel:
     dependencies:
