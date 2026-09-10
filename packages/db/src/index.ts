@@ -17,5 +17,6 @@ export * from './signing';
 export * from './events';
 export * from './repositories';
 export * from './seed';
+export * from './shares';
 export { resetDemo, seedDemo } from './demo/seed';
 export { seedRealEstate } from './demo/realestate';

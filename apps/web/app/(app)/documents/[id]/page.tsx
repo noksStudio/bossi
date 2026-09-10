@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { asPrincipal, getDocument } from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
+import { ShareButton } from '@/components/app/share-button';
 import { StatusPill } from '@/components/site/chrome';
 import {
   daysUntil, docTypeLabel, documentUrl, expiryTone, formatBytes, formatDate, sourceLabel,
@@ -50,17 +51,20 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           </div>
           <p className="mt-1 text-[0.82rem] text-muted" dir="ltr">{doc.filename}</p>
         </div>
-        {url ? (
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-md px-4 py-2 text-[0.88rem] font-medium text-white"
-            style={{ background: 'var(--accent)' }}
-          >
-            פתח בכרטיסייה חדשה
-          </a>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-2.5">
+          <ShareButton documentId={doc.id} />
+          {url ? (
+            <a
+              href={url}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-md px-4 py-2 text-[0.88rem] font-medium text-white"
+              style={{ background: 'var(--accent)' }}
+            >
+              פתח בכרטיסייה חדשה
+            </a>
+          ) : null}
+        </div>
       </header>
 
       <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr]">

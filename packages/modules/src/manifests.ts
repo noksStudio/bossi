@@ -31,6 +31,8 @@ export const documents: ModuleManifest = {
     defineEvent('documents.needs_review', 'ביטחון הסיווג נמוך מהסף — נדרש אישור אנושי'),
     defineEvent('documents.expiring', 'תוקף המסמך עומד לפוג'),
     defineEvent('documents.expired', 'תוקף המסמך פג'),
+    defineEvent('documents.shared', 'נוצר קישור שיתוף למסמך'),
+    defineEvent('documents.uploaded', 'מסמך הועלה ידנית דרך המסך'),
   ],
   nav: [{ id: 'documents', label: 'מסמכים', href: '/documents', order: 20, realm: 'staff', icon: 'FileText' }],
   slots: [

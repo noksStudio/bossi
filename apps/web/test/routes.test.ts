@@ -110,4 +110,12 @@ describe('הפרדת ריאלמים ב-middleware', () => {
     expect(await go('/admin')).toContain('/admin/signin');
     expect(await go('/api/admin/tenants')).toContain('/admin/signin');
   });
+
+  it('קישור שיתוף וקבצי הדמו שהוא מטמיע פתוחים בלי עוגייה', async () => {
+    // באג אמיתי שנתפס כאן: middleware.matcher פוטר רק סיומות תמונה,
+    // ו-PDF לא ביניהן — כך שהקובץ המוטמע ב-object של דף השיתוף היה
+    // מפנה לדף ההתחברות, ומפיל את כל הצפייה האנונימית.
+    expect(await go('/s/some-token')).toBeNull();
+    expect(await go('/demo/invoice.pdf')).toBeNull();
+  });
 });

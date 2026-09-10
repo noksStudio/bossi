@@ -19,7 +19,7 @@ const PLATFORM_COOKIE = process.env['AUTH_PLATFORM_COOKIE'] ?? 'bossi_platform';
  * וכל השאר על עוגיית הצוות בלבד. עוגייה של עולם אחד אינה שווה דבר
  * בעולם השני, כאן ובשכבה שמתחת (כלל 2).
  */
-const PUBLIC = ['/', '/signin', '/api/auth'];
+const PUBLIC = ['/', '/signin', '/api/auth', '/s', '/demo'];
 const PLATFORM_PUBLIC = ['/admin/signin', '/api/admin/auth'];
 
 export function middleware(request: NextRequest) {
