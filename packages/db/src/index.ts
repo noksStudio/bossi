@@ -8,3 +8,5 @@ export * from './notes';
 export * from './events';
 export * from './repositories';
 export * from './seed';
+export { resetDemo, seedDemo } from './demo/seed';
+export { seedRealEstate } from './demo/realestate';

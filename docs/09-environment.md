@@ -12,9 +12,29 @@
 
 | משתנה | מאיפה | הערות |
 |---|---|---|
-| `NEXT_PUBLIC_APP_URL` | — | `https://bossi.co.il` בייצור; ב-Preview השתמשו ב-`VERCEL_URL` |
-| `DATABASE_URL` | [Neon](https://neon.tech) → Connection string (Pooled) | **חייב pgvector.** Neon מומלץ: ענף DB נפרד לכל Preview |
-| `DATABASE_URL_UNPOOLED` | Neon → Direct connection | מיגרציות בלבד — PgBouncer שובר `CREATE INDEX CONCURRENTLY` |
+| `DATABASE_URL` | [Neon](https://neon.tech) → Connection string (Pooled) | **המשתנה היחיד שחובה.** בלעדיו האפליקציה זורקת בעלייה |
+
+**תיקון לגרסה קודמת של המסמך:** `NEXT_PUBLIC_APP_URL` ו-`DATABASE_URL_UNPOOLED`
+תועדו כאן כנדרשים, אך אינם נקראים בשום מקום בקוד. הם הוסרו.
+`DATABASE_URL_UNPOOLED` יחזור אם וכאשר תידרש מיגרציה שאינה עוברת דרך PgBouncer
+(למשל `CREATE INDEX CONCURRENTLY`); כרגע אין כזו.
+
+### אתחול מסד ריק
+
+מסד חדש הוא ריק — הגדרת `DATABASE_URL` אינה מריצה מיגרציות ואינה זורעת.
+`/api/admin/bootstrap` עושה את שניהם, ומוגן בשלושה מנעולים בלתי תלויים:
+`BOOTSTRAP_SECRET` חייב להיות מוגדר (אחרת 404), הסוד מושווה בזמן קבוע,
+**והנתיב מסרב לרוץ אם קיים ולו דייר אמיתי אחד** — כך שגם סוד שדלף אינו
+יכול לגעת בנתונים של לקוח משלם.
+
+```
+/api/admin/bootstrap?secret=<SECRET>&step=status
+/api/admin/bootstrap?secret=<SECRET>&step=migrate
+/api/admin/bootstrap?secret=<SECRET>&step=seed
+/api/admin/bootstrap?secret=<SECRET>&step=seed-realestate
+```
+
+**להסיר את `BOOTSTRAP_SECRET` מיד אחרי האתחול.** הנתיב מת ברגע שהוא נעלם.
 
 **הקמת Neon:** פרויקט חדש → אזור `eu-central-1` (פרנקפורט, קרוב ל-`fra1` של Vercel) →
 `CREATE EXTENSION vector; CREATE EXTENSION pg_trgm;`

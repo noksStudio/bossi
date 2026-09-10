@@ -1,9 +1,5 @@
-import { readdir, readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { withPlatform } from './client';
-
-const MIGRATIONS_DIR = join(dirname(fileURLToPath(import.meta.url)), '..', 'migrations');
+import { MIGRATIONS } from './migrations.generated';
 
 /**
  * מריץ מיגרציות שטרם הורצו, לפי סדר שם הקובץ, כל אחת בטרנזקציה משלה.
@@ -20,15 +16,13 @@ export async function migrate(log: (msg: string) => void = console.log): Promise
     `),
   );
 
-  const files = (await readdir(MIGRATIONS_DIR)).filter((f) => f.endsWith('.sql')).sort();
   const { rows } = await withPlatform((tx) =>
     tx.query<{ name: string; checksum: string }>('select name, checksum from _migrations'),
   );
   const applied = new Map(rows.map((r) => [r.name, r.checksum]));
 
   const ran: string[] = [];
-  for (const name of files) {
-    const sql = await readFile(join(MIGRATIONS_DIR, name), 'utf8');
+  for (const { name, sql } of MIGRATIONS) {
     const checksum = await sha256(sql);
     const previous = applied.get(name);
 

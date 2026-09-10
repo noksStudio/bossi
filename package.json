@@ -8,14 +8,15 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "modules": "tsx scripts/modules.ts",
-    "check": "pnpm typecheck && pnpm test && pnpm modules services >/dev/null",
+    "check": "node scripts/gen-migrations.mjs --check && pnpm typecheck && pnpm test && pnpm modules services >/dev/null",
     "dev": "pnpm --filter @bossi/web dev",
     "build": "pnpm --filter @bossi/web build",
     "db:migrate": "pnpm --filter @bossi/db migrate",
     "db:seed": "pnpm --filter @bossi/db seed",
     "db:reset": "pnpm --filter @bossi/db reset",
     "demo": "pnpm --filter @bossi/db demo",
-    "demo:reset": "pnpm --filter @bossi/db demo:reset"
+    "demo:reset": "pnpm --filter @bossi/db demo:reset",
+    "gen:migrations": "node scripts/gen-migrations.mjs"
   },
   "dependencies": {
     "@bossi/kernel": "workspace:*",
