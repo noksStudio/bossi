@@ -4,6 +4,7 @@ import { ALL_MODULES } from './manifests';
 export * from './ports';
 export * from './manifests';
 export * from './plans';
+export * from './categories';
 export { stubPort } from './stub';
 
 /** המרשם המלא של המערכת. דייר מקבל תת-קבוצה שלו. */

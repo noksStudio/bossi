@@ -1,10 +1,4 @@
-import type { ModuleCategory } from '@bossi/kernel';
-import { ALL_MODULES } from '@bossi/modules';
-
-const CATEGORY_LABELS: Record<ModuleCategory, string> = {
-  documents: 'מסמכים', money: 'כספים', commerce: 'מסחר', intelligence: 'בינה',
-};
-const CATEGORY_ORDER: ModuleCategory[] = ['documents', 'money', 'commerce', 'intelligence'];
+import { ALL_MODULES, CATEGORY_LABELS, CATEGORY_ORDER } from '@bossi/modules';
 
 /**
  * טופס חבילה — משותף ליצירה ולעריכה. שרת בלבד: הצ'קבוקסים נשלחים

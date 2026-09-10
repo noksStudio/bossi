@@ -5,7 +5,7 @@ import { CommandPalette } from '@/components/app/command-palette';
 import { MobileNav } from '@/components/app/mobile-nav';
 import { NavIcon } from '@/components/app/nav-icon';
 import { requirePrincipal } from '@/lib/session';
-import { loadShell } from '@/lib/navigation';
+import { groupSidebarNav, loadShell } from '@/lib/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,6 +19,7 @@ export const dynamic = 'force-dynamic';
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const principal = await requirePrincipal();
   const shell = await loadShell(principal);
+  const sidebarGroups = groupSidebarNav(shell.nav);
 
   return (
     <div className="flex min-h-dvh">
@@ -29,19 +30,26 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </div>
 
         <nav className="flex-1 overflow-y-auto p-3">
-          <ul className="space-y-0.5">
-            {shell.nav.map((item) => (
-              <li key={item.id}>
-                <Link
-                  href={item.href}
-                  className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[0.88rem] text-secondary transition-colors hover:bg-raised hover:text-primary"
-                >
-                  <NavIcon name={item.icon} className="size-4 shrink-0" />
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          {sidebarGroups.map((group, i) => (
+            <div key={group.category ?? 'core'} className={i > 0 ? 'mt-4' : undefined}>
+              {group.label ? (
+                <div className="px-3 pb-1 text-[0.7rem] font-medium text-muted">{group.label}</div>
+              ) : null}
+              <ul className="space-y-0.5">
+                {group.items.map((item) => (
+                  <li key={item.id}>
+                    <Link
+                      href={item.href}
+                      className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[0.88rem] text-secondary transition-colors hover:bg-raised hover:text-primary"
+                    >
+                      <NavIcon name={item.icon} className="size-4 shrink-0" />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
 
         <div className="border-t border-hairline p-3">
