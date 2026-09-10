@@ -162,4 +162,34 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
       withPlatform((tx) => tx.query('delete from platform_audit')),
     ).rejects.toThrow();
   });
+
+  it('התחברות ראשונה על מסד חדש מריצה את המיגרציה החסרה לבד', async () => {
+    // זה בדיוק הבאג שהתגלה בפריסה: מסד שבו 0011 עוד לא רץ — המצב
+    // הטבעי של כל מסד ייצור עד לרגע זה — אין דרך להריץ אותה חוץ מדרך
+    // קונסולת הניהול, ואין דרך להיכנס לקונסולה בלי ש-0011 כבר רץ.
+    // בלי תיקון, הניסיון הבא זורק "relation does not exist" וקורס ב-500.
+    await withPlatform(async (tx) => {
+      await tx.query('drop table if exists platform_audit cascade');
+      await tx.query('drop table if exists platform_sessions cascade');
+      await tx.query("delete from _migrations where name = '0011_platform_admin.sql'");
+    });
+
+    const result = await signInPlatform({ email: EMAIL, password: PASSWORD, ip: '11.11.11.11' });
+    expect(result.ok).toBe(true);
+
+    // והמסד לא רק "לא קרס" — הוא באמת חזר לשלם: שתי הטבלאות קיימות
+    // מחדש, וההתחברות שהתבקשה בפועל נכתבה בהן.
+    const tables = await withPlatform((tx) =>
+      tx.query<{ n: string }>(
+        `select count(*)::text as n from pg_tables
+          where tablename in ('platform_sessions', 'platform_audit')`,
+      ),
+    );
+    expect(tables.rows[0]?.n).toBe('2');
+
+    if (result.ok) {
+      const admin = await resolvePlatformSession(result.token);
+      expect(admin?.email).toBe(EMAIL);
+    }
+  });
 });

@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { withPlatform } from './client';
+import { migrate } from './migrate';
 
 /**
  * אימות אדמין הפלטפורמה — הריאלם השלישי.
@@ -66,6 +67,15 @@ export async function signInPlatform(input: {
   const credentials = adminCredentials();
   if (!credentials) return { ok: false, reason: 'disabled' };
 
+  // ריאלם הפלטפורמה חי מאחורי מיגרציה (0011) שרק קונסולת הניהול עצמה
+  // יכולה להריץ — וההתחברות הראשונה על מסד חדש היא בדיוק הרגע שבו
+  // `platform_sessions`/`platform_audit` עוד לא קיימות. בלי השורה הזו,
+  // הניסיון הראשון זורק "relation does not exist" ומקבל דף 500 גנרי —
+  // תלות מעגלית: אי אפשר להריץ מיגרציות בלי להתחבר, ואי אפשר להתחבר
+  // בלי שהמיגרציות רצו. `migrate()` אידמפוטנטי וזול ברגע שהכול כבר
+  // הורץ (שאילתת SELECT יחידה), ולכן רץ בכל ניסיון ולא רק בפעם הראשונה.
+  await migrate(() => {});
+
   if (await isLocked(input.ip)) {
     return { ok: false, reason: 'locked', retryAfterMinutes: LOCKOUT_MINUTES };
   }
@@ -117,6 +127,9 @@ export async function resolvePlatformSession(token: string): Promise<PlatformAdm
   const credentials = adminCredentials();
   if (!credentials) return null;
 
+  // עוגייה תקפה לכאורה לא אמורה להפיל את הרינדור אם הטבלה חסרה מסיבה
+  // כלשהי (סביבה שאותחלה מחדש, מסד ריק). "לא הצלחתי לזהות" ו"אין
+  // עוגייה" הם אותה תשובה לקורא — לא מחובר — לא קריסה.
   const row = await withPlatform(async (tx) => {
     const { rows } = await tx.query<{ email: string }>(
       `update platform_sessions set last_seen_at = now()
@@ -125,7 +138,7 @@ export async function resolvePlatformSession(token: string): Promise<PlatformAdm
       [sha256(token)],
     );
     return rows[0] ?? null;
-  });
+  }).catch(() => null);
 
   if (!row) return null;
   if (row.email.toLowerCase() !== credentials.email.toLowerCase()) return null;
