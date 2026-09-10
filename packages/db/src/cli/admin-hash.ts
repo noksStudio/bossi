@@ -18,9 +18,14 @@ const MIN_LENGTH = 12;
 const PROMPTS = ['כתובת מייל לאדמין: ', 'סיסמה: ', 'שוב, לאימות: '];
 
 const answers = await ask(PROMPTS);
-const [email = '', password = '', again = ''] = answers;
+// **הסיסמה נלקחת בדיוק כפי שהוקלדה.** חיתוך רווחים כאן היה מייצר hash
+// של מחרוזת אחרת מזו שהדפדפן שולח בהתחברות — ואז סיסמה שמסתיימת ברווח
+// נועלת את המשתמש בלי שום הודעת שגיאה שתסביר למה.
+const [rawEmail = '', password = '', again = ''] = answers;
+const email = rawEmail.trim();
 
 fail(!email.includes('@'), 'כתובת מייל לא תקינה.');
+fail(password !== password.trim(), 'הסיסמה מתחילה או מסתיימת ברווח. זה עובד, אבל קל לטעות בו — עדיף בלי.');
 fail(password !== again, 'הסיסמאות אינן זהות.');
 fail(
   password.length < MIN_LENGTH,
@@ -45,7 +50,7 @@ function ask(prompts: string[]): Promise<string[]> {
     if (stdin.isTTY) stdout.write(prompts[0]!);
 
     rl.on('line', (line) => {
-      collected.push(line.trim());
+      collected.push(line);
       if (collected.length >= prompts.length) return rl.close();
       if (stdin.isTTY) stdout.write(prompts[collected.length]!);
     });
