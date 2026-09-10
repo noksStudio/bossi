@@ -16,6 +16,7 @@
     "db:reset": "pnpm --filter @bossi/db reset",
     "demo": "pnpm --filter @bossi/db demo",
     "demo:reset": "pnpm --filter @bossi/db demo:reset",
+    "admin:hash": "pnpm --filter @bossi/db admin:hash",
     "gen:migrations": "node scripts/gen-migrations.mjs"
   },
   "dependencies": {

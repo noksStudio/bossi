@@ -13,7 +13,8 @@
     "seed": "tsx src/cli/seed.ts",
     "reset": "tsx src/cli/reset.ts",
     "demo": "tsx src/cli/demo.ts",
-    "demo:reset": "tsx src/cli/demo.ts --reset"
+    "demo:reset": "tsx src/cli/demo.ts --reset",
+    "admin:hash": "tsx src/cli/admin-hash.ts"
   },
   "dependencies": {
     "@bossi/kernel": "workspace:*",

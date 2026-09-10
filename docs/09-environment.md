@@ -22,19 +22,19 @@
 ### אתחול מסד ריק
 
 מסד חדש הוא ריק — הגדרת `DATABASE_URL` אינה מריצה מיגרציות ואינה זורעת.
-`/api/admin/bootstrap` עושה את שניהם, ומוגן בשלושה מנעולים בלתי תלויים:
-`BOOTSTRAP_SECRET` חייב להיות מוגדר (אחרת 404), הסוד מושווה בזמן קבוע,
-**והנתיב מסרב לרוץ אם קיים ולו דייר אמיתי אחד** — כך שגם סוד שדלף אינו
-יכול לגעת בנתונים של לקוח משלם.
+שני הדברים נעשים מ-**קונסולת הניהול** ב-`/admin/system`.
 
-```
-/api/admin/bootstrap?secret=<SECRET>&step=status
-/api/admin/bootstrap?secret=<SECRET>&step=migrate
-/api/admin/bootstrap?secret=<SECRET>&step=seed
-/api/admin/bootstrap?secret=<SECRET>&step=seed-realestate
-```
+1. `pnpm admin:hash` — מייצר `PLATFORM_ADMIN_EMAIL` ו-`PLATFORM_ADMIN_PASSWORD_HASH`.
+2. להזין את שניהם ב-Vercel ולפרוס.
+3. להיכנס ל-`/admin`, ואז **מערכת → הרץ מיגרציות → זרע מחדש את ההדגמה**.
 
-**להסיר את `BOOTSTRAP_SECRET` מיד אחרי האתחול.** הנתיב מת ברגע שהוא נעלם.
+הזריעה מסרבת לרוץ כשקיים ולו דייר אמיתי אחד — היא מוחקת ובונה מחדש,
+ולא תיגע בנתונים של לקוח משלם. המנעול נבדק בשרת ולא רק ב-UI.
+
+**הוסר: `BOOTSTRAP_SECRET` ו-`/api/admin/bootstrap`.** סוד בכתובת עבד, אבל
+לא היה ניתן לתעד ולא היה ניתן לבטל: מי שהעתיק את ה-URL פעם אחת החזיק אותו
+לתמיד, ואי אפשר היה לדעת מי הריץ מה. הקונסולה דורשת חיבור פעיל, רושמת כל
+פעולה עם הכתובת של מי שביצע, ומנתקת ביציאה.
 
 **הקמת Neon:** פרויקט חדש → אזור `eu-central-1` (פרנקפורט, קרוב ל-`fra1` של Vercel) →
 `CREATE EXTENSION vector; CREATE EXTENSION pg_trgm;`

@@ -8,6 +8,8 @@ export * from './documents';
 export * from './leases';
 export * from './metering';
 export * from './notes';
+export * from './platform';
+export * from './platform-auth';
 export * from './portal';
 export * from './retainers';
 export * from './signing';

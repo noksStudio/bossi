@@ -71,3 +71,43 @@ describe('השער הראשון מכסה כל מסך צוות', () => {
     expect(response?.headers.get('location'), `${href} עבר בלי עוגייה`).toContain('/signin');
   });
 });
+
+/**
+ * שני העולמות אינם מתערבבים.
+ *
+ * עוגיית צוות תקפה אינה פותחת את `/admin`, ועוגיית אדמין אינה פותחת
+ * מסך של דייר. זו הבדיקה שמגנה על כלל 2 בשכבת ה-edge.
+ */
+describe('הפרדת ריאלמים ב-middleware', () => {
+  const STAFF = 'bossi_staff';
+  const PLATFORM = 'bossi_platform';
+
+  async function go(path: string, cookie?: string) {
+    const { middleware } = await import('../middleware');
+    const request = new NextRequest(new URL(`http://localhost${path}`));
+    if (cookie) request.cookies.set(cookie, 'x');
+    return middleware(request)?.headers.get('location') ?? null;
+  }
+
+  it('עוגיית צוות אינה פותחת את הניהול', async () => {
+    expect(await go('/admin', STAFF)).toContain('/admin/signin');
+    expect(await go('/admin/system', STAFF)).toContain('/admin/signin');
+  });
+
+  it('עוגיית אדמין אינה פותחת מסך של דייר', async () => {
+    expect(await go('/dashboard', PLATFORM)).toContain('/signin');
+    expect(await go('/customers', PLATFORM)).toContain('/signin');
+  });
+
+  it('כל אחת פותחת את העולם שלה', async () => {
+    expect(await go('/admin', PLATFORM)).toBeNull();
+    expect(await go('/dashboard', STAFF)).toBeNull();
+  });
+
+  it('מסך ההתחברות לניהול פתוח, שאר הניהול לא', async () => {
+    expect(await go('/admin/signin')).toBeNull();
+    expect(await go('/api/admin/auth/signin')).toBeNull();
+    expect(await go('/admin')).toContain('/admin/signin');
+    expect(await go('/api/admin/tenants')).toContain('/admin/signin');
+  });
+});

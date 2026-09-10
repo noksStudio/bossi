@@ -11,6 +11,13 @@ const hasDb = Boolean(process.env['DATABASE_URL']);
 
 /** טבלאות שאינן שייכות לדייר, ולכן אינן אמורות לשאת מדיניות. */
 const EXEMPT = new Set(['_migrations']);
+
+/**
+ * טבלאות הריאלם השלישי. אין להן `tenant_id` כי אין להן דייר — אדמין
+ * הפלטפורמה אינו יושב בתוך עסק. הבידוד שלהן אינו RLS אלא הרשאות:
+ * ל-`bossi_app` אין עליהן שום גישה, וזה נבדק במפורש למטה.
+ */
+const PLATFORM_TABLES = new Set(['platform_sessions', 'platform_audit']);
 /** `tenants` היא ENABLE ולא FORCE — היא צריכה נתיב יצירה. */
 const NOT_FORCED = new Set(['tenants']);
 
@@ -65,6 +72,20 @@ describe.skipIf(!hasDb)('כיסוי בידוד', () => {
     expect(failures, `טבלאות בלי FORCE: ${failures.join(', ')}`).toEqual([]);
   });
 
+  it('לטבלאות הפלטפורמה אין גישה מתפקיד האפליקציה', async () => {
+    // זה החסם האמיתי עליהן. הרשאה נבדקת לפני מדיניות, ולכן היעדר
+    // GRANT חזק מכל policy שאפשר לכתוב.
+    const grants = await withPlatform(async (tx) => {
+      const { rows } = await tx.query<{ table_name: string; privilege_type: string }>(
+        `select table_name, privilege_type from information_schema.role_table_grants
+          where grantee = 'bossi_app' and table_name = any($1)`,
+        [[...PLATFORM_TABLES]],
+      );
+      return rows.map((r) => `${r.table_name}.${r.privilege_type}`);
+    });
+    expect(grants, `הרשאות שלא אמורות להתקיים: ${grants.join(', ')}`).toEqual([]);
+  });
+
   it('לכל טבלה של דייר יש עמודת tenant_id', async () => {
     const missing = await withPlatform(async (tx) => {
       const { rows } = await tx.query<{ name: string }>(`
@@ -72,7 +93,7 @@ describe.skipIf(!hasDb)('כיסוי בידוד', () => {
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
          where n.nspname = 'public' and c.relkind = 'r'
-           and c.relname not in ('_migrations', 'tenants')
+           and c.relname not in ('_migrations', 'tenants', 'platform_sessions', 'platform_audit')
            and not exists (
              select 1 from pg_attribute a
               where a.attrelid = c.oid and a.attname = 'tenant_id' and a.attnum > 0
