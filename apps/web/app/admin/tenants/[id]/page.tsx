@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { getTenantSummary, recordAudit, setTenantModule, setTenantPlan, tenantModules } from '@bossi/db';
+import {
+  applyFeaturePackageToTenant, getTenantSummary, listFeaturePackages, recordAudit,
+  setTenantModule, setTenantPlan, tenantModules,
+} from '@bossi/db';
 import { ALL_MODULES, PLANS, PLAN_ORDER, type PlanId } from '@bossi/modules';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatTile, StatusPill } from '@/components/site/chrome';
@@ -28,6 +31,7 @@ export default async function AdminTenantPage({ params }: { params: Promise<{ id
   const enabled = await tenantModules(id);
   const enabledIds = new Set(enabled.filter((m) => m.enabled).map((m) => m.module_id));
   const plan = PLANS[tenant.plan as PlanId] ?? PLANS.starter;
+  const packages = await listFeaturePackages();
 
   async function toggleModule(moduleId: string, next: boolean) {
     'use server';
@@ -50,6 +54,19 @@ export default async function AdminTenantPage({ params }: { params: Promise<{ id
 
     await setTenantPlan(id, next);
     await recordAudit({ kind: 'plan_changed', email: admin.email, tenantId: id, detail: { plan: next } });
+    revalidatePath(`/admin/tenants/${id}`);
+  }
+
+  async function applyPackage(formData: FormData) {
+    'use server';
+    const admin = await requireAdmin();
+    const packageId = String(formData.get('packageId') ?? '');
+    if (!packageId) return;
+
+    const ok = await applyFeaturePackageToTenant(id, packageId);
+    if (ok) {
+      await recordAudit({ kind: 'package_applied', email: admin.email, tenantId: id, detail: { packageId } });
+    }
     revalidatePath(`/admin/tenants/${id}`);
   }
 
@@ -105,6 +122,41 @@ export default async function AdminTenantPage({ params }: { params: Promise<{ id
             style={{ background: 'var(--text-primary)', color: 'var(--surface)' }}
           >
             עדכן חבילה
+          </button>
+        </form>
+      </section>
+
+      <section className="rounded-lg border border-hairline">
+        <header className="border-b border-hairline px-4 py-3">
+          <h2 className="text-[0.98rem]">החל חבילת תכונה</h2>
+          <p className="mt-0.5 text-[0.76rem] text-muted">
+            מחליף את כל המודולים הפעילים באלה שבחבילה — לא מצרף מעליהם. מה שמוסיפים או מכבים
+            ידנית אחר כך למטה הוא סטייה מתועדת מהחבילה, לא עריכה שלה.
+          </p>
+        </header>
+        <form action={applyPackage} className="flex flex-wrap items-end gap-3 p-4">
+          <div>
+            <label htmlFor="packageId" className="block text-[0.8rem] text-secondary">חבילה</label>
+            <select
+              id="packageId"
+              name="packageId"
+              defaultValue=""
+              className="mt-1 min-w-64 rounded-md border border-hairline bg-transparent px-3 py-1.5 text-[0.88rem]"
+            >
+              <option value="" disabled>בחרו חבילה</option>
+              {packages.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.module_ids.length} מודולים)
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="submit"
+            className="rounded-md px-3 py-1.5 text-[0.85rem] font-medium transition-opacity hover:opacity-90"
+            style={{ background: 'var(--text-primary)', color: 'var(--surface)' }}
+          >
+            החל על הדייר
           </button>
         </form>
       </section>

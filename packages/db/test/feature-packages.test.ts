@@ -1,7 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { PRESETS } from '@bossi/kernel';
 import {
-  closePool, getFeaturePackage, listFeaturePackages, migrate, seedDefaultPackages, withPlatform,
+  applyFeaturePackageToTenant, closePool, createFeaturePackage, createTenant, deleteFeaturePackage,
+  duplicateFeaturePackage, getFeaturePackage, listFeaturePackages, migrate, seedDefaultPackages,
+  tenantModules, updateFeaturePackage, withPlatform,
 } from '../src/index';
 
 /**
@@ -87,6 +89,100 @@ describe.skipIf(!hasDb)('חבילות תכונה', () => {
 
     const all = await listFeaturePackages();
     expect(all).toHaveLength(6); // חמש ברירות מחדל + החד-פעמית
+  });
+
+  it('יצירה, עריכה ומחיקה', async () => {
+    const id = await createFeaturePackage({
+      name: 'חבילת עורך דין 1', description: 'תבנית ראשונה', moduleIds: ['documents', 'search'],
+    });
+    const created = await getFeaturePackage(id);
+    expect(created?.name).toBe('חבילת עורך דין 1');
+    expect(created?.is_template).toBe(true); // ברירת מחדל
+    expect(created?.slug).toMatch(/^pkg-/); // לא נחשף לעריכה — מזהה פנימי בלבד
+
+    const updated = await updateFeaturePackage(id, {
+      name: 'חבילת עורך דין 1 — מעודכן', moduleIds: ['documents', 'search', 'billing'], isTemplate: true,
+    });
+    expect(updated).toBe(true);
+    const after = await getFeaturePackage(id);
+    expect(after?.name).toBe('חבילת עורך דין 1 — מעודכן');
+    expect(after?.module_ids).toEqual(['documents', 'search', 'billing']);
+
+    expect(await deleteFeaturePackage(id)).toBe(true);
+    expect(await getFeaturePackage(id)).toBeNull();
+  });
+
+  it('שכפול יוצר עותק עצמאי, לא הפניה', async () => {
+    const sourceId = await createFeaturePackage({
+      name: 'חבילת עורך דין 1', moduleIds: ['documents', 'billing'],
+    });
+    const copyId = await duplicateFeaturePackage(sourceId, 'חבילת עורך דין 2');
+    expect(copyId).not.toBe(sourceId);
+
+    const copy = await getFeaturePackage(copyId!);
+    expect(copy?.name).toBe('חבילת עורך דין 2');
+    expect(copy?.module_ids).toEqual(['documents', 'billing']);
+
+    // עריכת המקור לא נוגעת בעותק — שתי שורות עצמאיות, לא שיתוף מבנה.
+    await updateFeaturePackage(sourceId, { name: 'שונה', moduleIds: ['documents'], isTemplate: true });
+    const copyAfter = await getFeaturePackage(copyId!);
+    expect(copyAfter?.name).toBe('חבילת עורך דין 2');
+    expect(copyAfter?.module_ids).toEqual(['documents', 'billing']);
+  });
+
+  it('שכפול חבילה שלא קיימת מחזיר null ולא זורק', async () => {
+    expect(await duplicateFeaturePackage('00000000-0000-0000-0000-000000000000', 'x')).toBeNull();
+  });
+
+  describe('החלה על דייר', () => {
+    it('מחליפה — לא מצרפת — את המודולים הפעילים', async () => {
+      const stamp = Date.now().toString(36);
+      const tenantId = await createTenant({
+        slug: `pkgtest-a-${stamp}`, name: 'דייר לבדיקה', modules: ['documents', 'retainers', 'alerts'],
+      });
+      const packageId = await createFeaturePackage({
+        name: 'עסקי מוצר B2B', moduleIds: [...PRESETS.commerce],
+      });
+
+      const ok = await applyFeaturePackageToTenant(tenantId, packageId);
+      expect(ok).toBe(true);
+
+      const modules = await tenantModules(tenantId);
+      const enabled = new Set(modules.filter((m) => m.enabled).map((m) => m.module_id));
+      expect(enabled).toEqual(new Set(PRESETS.commerce));
+      // retainers ו-alerts היו דלוקים לפני ההחלה ואינם בחבילה החדשה — כבויים עכשיו.
+      expect(enabled.has('retainers')).toBe(false);
+    });
+
+    it('מודול שנשאר משני הצדדים לא מאבד את מועד ההדלקה המקורי שלו', async () => {
+      const stamp = Date.now().toString(36);
+      const tenantId = await createTenant({ slug: `pkgtest-b-${stamp}`, name: 'דייר לבדיקה', modules: ['documents'] });
+      const before = await withPlatform((tx) =>
+        tx.query<{ enabled_at: Date }>(
+          "select enabled_at from tenant_modules where tenant_id = $1 and module_id = 'documents'", [tenantId],
+        ),
+      );
+
+      const packageId = await createFeaturePackage({ name: 'כולל מסמכים', moduleIds: ['documents', 'search'] });
+      await applyFeaturePackageToTenant(tenantId, packageId);
+
+      const after = await withPlatform((tx) =>
+        tx.query<{ enabled_at: Date }>(
+          "select enabled_at from tenant_modules where tenant_id = $1 and module_id = 'documents'", [tenantId],
+        ),
+      );
+      expect(new Date(after.rows[0]!.enabled_at).getTime()).toBe(new Date(before.rows[0]!.enabled_at).getTime());
+    });
+
+    it('חבילה שלא קיימת לא נוגעת בדייר ומחזירה false', async () => {
+      const stamp = Date.now().toString(36);
+      const tenantId = await createTenant({ slug: `pkgtest-c-${stamp}`, name: 'דייר לבדיקה', modules: ['documents'] });
+      const ok = await applyFeaturePackageToTenant(tenantId, '00000000-0000-0000-0000-000000000000');
+      expect(ok).toBe(false);
+
+      const modules = await tenantModules(tenantId);
+      expect(modules.filter((m) => m.enabled).map((m) => m.module_id)).toEqual(['documents']);
+    });
   });
 
   it('רשימה ממוינת: תבניות לפני חד-פעמיות', async () => {

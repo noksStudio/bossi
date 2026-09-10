@@ -171,7 +171,13 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
     await withPlatform(async (tx) => {
       await tx.query('drop table if exists platform_audit cascade');
       await tx.query('drop table if exists platform_sessions cascade');
-      await tx.query("delete from _migrations where name = '0011_platform_admin.sql'");
+      await tx.query(
+        // 0013 מחליף פונקציה שנוצרת ב-0011 (הטבלה שנמחקה למעלה) — בלי
+        // למחוק גם את הרשומה שלה כאן, replay שמריץ רק 0011 מחדש היה
+        // מחזיר את הפונקציה לגרסה הישנה שלה. מסד שבאמת מעולם לא הריץ
+        // 0011 גם מעולם לא הגיע ל-0013 בפועל, אז זו הסימולציה הנאמנה.
+        "delete from _migrations where name in ('0011_platform_admin.sql', '0013_platform_audit_tenant_cascade.sql')",
+      );
     });
 
     const result = await signInPlatform({ email: EMAIL, password: PASSWORD, ip: '11.11.11.11' });
@@ -191,6 +197,35 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
       const admin = await resolvePlatformSession(result.token);
       expect(admin?.email).toBe(EMAIL);
     }
+  });
+
+  it('מחיקת דייר עם תיעוד עליו לא נחסמת — ה-cascade מנקה tenant_id בלבד', async () => {
+    // 0013: הטריגר של append-only חסם גם את ה-UPDATE שה-FK
+    // (`on delete set null`) מנפיק בעצמו כשדייר נמחק — כל מחיקת דייר
+    // שיש עליו שורת תיעוד אחת נכשלה. זה בדיוק מה ש-`demo:reset` עושה.
+    const { rows } = await withPlatform((tx) =>
+      tx.query<{ id: string }>(
+        `insert into tenants (slug, name) values ($1, 'דייר למחיקה') returning id`,
+        [`del-${Date.now().toString(36)}`],
+      ),
+    );
+    const tenantId = rows[0]!.id;
+    await recordAudit({ kind: 'module_enabled', email: EMAIL, tenantId, detail: { module: 'documents' } });
+
+    await withPlatform((tx) => tx.query('delete from tenants where id = $1', [tenantId]));
+
+    const audit = await withPlatform((tx) =>
+      tx.query<{ tenant_id: string | null; kind: string }>(
+        "select tenant_id, kind from platform_audit where kind = 'module_enabled' and detail->>'module' = 'documents' order by at desc limit 1",
+      ),
+    );
+    expect(audit.rows[0]?.tenant_id).toBeNull(); // ה-cascade עבד
+    expect(audit.rows[0]?.kind).toBe('module_enabled'); // ושום דבר אחר בשורה לא זז
+
+    // אבל שינוי אחר, לא-cascade, עדיין נדחה בשקט כרגיל.
+    await expect(
+      withPlatform((tx) => tx.query("update platform_audit set kind = 'tampered' where id = (select id from platform_audit limit 1)")),
+    ).rejects.toThrow();
   });
 
   it('אותה התחברות גם מבטיחה את חבילות ברירת המחדל (0012)', async () => {

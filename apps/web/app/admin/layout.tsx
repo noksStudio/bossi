@@ -34,6 +34,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         {admin ? (
           <nav className="flex items-center gap-1 text-[0.84rem]">
             <AdminLink href="/admin">דיירים</AdminLink>
+            <AdminLink href="/admin/packages">חבילות</AdminLink>
             <AdminLink href="/admin/system">מערכת</AdminLink>
           </nav>
         ) : null}

@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { PRESETS } from '@bossi/kernel';
 import { withPlatform, type Tx } from './client';
 
@@ -91,4 +92,100 @@ async function insertIfMissing(
     [p.slug, p.name, p.description, p.modules],
   );
   return (rowCount ?? 0) > 0;
+}
+
+// ── CRUD ─────────────────────────────────────────────────────────────────
+//
+// שם, תיאור ורשימת מודולים — זה כל מה שאדמין עורך. `slug` אינו נחשף
+// בטופס בכלל: הוא מזהה פנימי בלבד (הזריעה למעלה היא היחידה שבאמת
+// זקוקה לו כדי להיות אידמפוטנטית), ולכן נוצר כאן אוטומטית ולא נדרש
+// שם עברי יתעקם לכתובת URL.
+
+function randomSlug(): string {
+  return `pkg-${randomBytes(5).toString('hex')}`;
+}
+
+export async function createFeaturePackage(input: {
+  name: string;
+  description?: string | null;
+  moduleIds: string[];
+  isTemplate?: boolean;
+}): Promise<string> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<{ id: string }>(
+      `insert into feature_packages (slug, name, description, module_ids, is_template)
+       values ($1, $2, $3, $4, coalesce($5, true))
+       returning id`,
+      [randomSlug(), input.name, input.description ?? null, input.moduleIds, input.isTemplate ?? null],
+    ),
+  );
+  return rows[0]!.id;
+}
+
+export async function updateFeaturePackage(
+  id: string,
+  input: { name: string; description?: string | null; moduleIds: string[]; isTemplate: boolean },
+): Promise<boolean> {
+  const { rowCount } = await withPlatform((tx) =>
+    tx.query(
+      `update feature_packages
+          set name = $2, description = $3, module_ids = $4, is_template = $5, updated_at = now()
+        where id = $1`,
+      [id, input.name, input.description ?? null, input.moduleIds, input.isTemplate],
+    ),
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/** שכפול — נקודת ההתחלה של "חבילת עורך דין 2" מתוך "חבילת עורך דין 1". */
+export async function duplicateFeaturePackage(id: string, name: string): Promise<string | null> {
+  const source = await getFeaturePackage(id);
+  if (!source) return null;
+  return createFeaturePackage({
+    name,
+    description: source.description,
+    moduleIds: source.module_ids,
+    isTemplate: source.is_template,
+  });
+}
+
+export async function deleteFeaturePackage(id: string): Promise<boolean> {
+  const { rowCount } = await withPlatform((tx) => tx.query('delete from feature_packages where id = $1', [id]));
+  return (rowCount ?? 0) > 0;
+}
+
+// ── החלה על דייר ─────────────────────────────────────────────────────────
+
+/**
+ * מחליפה את כל המודולים הפעילים של הדייר באלה שבחבילה — לא מוסיפה
+ * מעליהם. חבילה היא הרכב הבסיס; מה שהאדמין מוסיף או מוריד אחרי זה
+ * ידנית (במסך הדייר הקיים) הוא סטייה מתועדת מהחבילה, לא עריכה שלה —
+ * ולכן ה"החלה" עצמה חייבת לקבוע נקודת התחלה נקייה ולא רק לצרף.
+ *
+ * טרנזקציה אחת: אין מצב ביניים שבו חלק מהמודולים כבר הוחלפו וחלק לא.
+ */
+export async function applyFeaturePackageToTenant(tenantId: string, packageId: string): Promise<boolean> {
+  const pkg = await getFeaturePackage(packageId);
+  if (!pkg) return false;
+
+  await withPlatform(async (tx) => {
+    await tx.query(
+      `update tenant_modules
+          set enabled = false, disabled_at = now()
+        where tenant_id = $1 and enabled = true and not (module_id = any($2::text[]))`,
+      [tenantId, pkg.module_ids],
+    );
+    for (const moduleId of pkg.module_ids) {
+      await tx.query(
+        `insert into tenant_modules (tenant_id, module_id, enabled)
+         values ($1, $2, true)
+         on conflict (tenant_id, module_id) do update
+           set enabled = true,
+               enabled_at = case when tenant_modules.enabled then tenant_modules.enabled_at else now() end,
+               disabled_at = null`,
+        [tenantId, moduleId],
+      );
+    }
+  });
+  return true;
 }
