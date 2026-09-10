@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BossiMark } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { CommandPalette } from '@/components/app/command-palette';
+import { MobileNav } from '@/components/app/mobile-nav';
 import { NavIcon } from '@/components/app/nav-icon';
 import { requirePrincipal } from '@/lib/session';
 import { loadShell } from '@/lib/navigation';
@@ -75,9 +76,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 p-5 lg:p-7">{children}</main>
+        <main className="min-w-0 flex-1 p-5 pb-24 lg:p-7">{children}</main>
       </div>
 
+      <MobileNav nav={shell.nav} />
       <CommandPalette />
     </div>
   );
