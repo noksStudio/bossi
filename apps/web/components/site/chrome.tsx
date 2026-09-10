@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 /** מסגרת חלון אחידה לכל הדגמות המוצר בעמוד. */
 export function AppWindow({
   path,
@@ -58,25 +60,44 @@ export function StatusPill({
 /**
  * אריח מדד. ערך בספרות פרופורציונליות (tabular-nums שמור לעמודות
  * שצריכות להתיישר, ובגודל תצוגה הוא נראה רופף).
+ *
+ * `href` הופך אותו לקישור — האריח כולו לחיץ, לא רק הערך. בלעדיו
+ * מוצג בדיוק כמו קודם, לתאימות עם המסכים שכבר משתמשים בו כתצוגה
+ * בלבד (כרטיס הדייר באדמין, למשל, שבו המספר לא מוביל לשום מקום).
  */
 export function StatTile({
   label,
   value,
   note,
   spark,
+  href,
 }: {
   label: string;
   value: string;
   note?: string;
   spark?: number[];
+  href?: string;
 }) {
-  return (
-    <div className="min-w-0 border-hairline px-4 py-3.5">
+  const content = (
+    <>
       <div className="truncate text-[0.72rem] text-muted">{label}</div>
       <div className="mt-1 text-[1.55rem] font-semibold leading-none">{value}</div>
       {spark ? <Sparkline points={spark} /> : null}
       {note ? <div className="mt-1.5 text-[0.72rem] text-secondary">{note}</div> : null}
-    </div>
+    </>
+  );
+
+  if (!href) {
+    return <div className="min-w-0 border-hairline px-4 py-3.5">{content}</div>;
+  }
+
+  return (
+    <Link
+      href={href}
+      className="block min-w-0 border-hairline px-4 py-3.5 transition-colors hover:bg-sunken"
+    >
+      {content}
+    </Link>
   );
 }
 

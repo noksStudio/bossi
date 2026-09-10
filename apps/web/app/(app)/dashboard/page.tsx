@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ChevronLeft, FileText, Receipt, Search, UserPlus } from 'lucide-react';
 import {
   asPrincipal, documentStats, expiringDocuments, listCustomers, quietCustomers, recentIntake,
 } from '@bossi/db';
@@ -30,6 +31,13 @@ export default async function DashboardPage() {
   const built = new Set(['metering.usage_bar']);
   const placeholders = shell.slots('dashboard.widgets').filter((w) => !built.has(w.id));
 
+  const quickActions = [
+    { href: '/customers/new', label: 'לקוח חדש', icon: UserPlus },
+    { href: '/search', label: 'חיפוש', icon: Search },
+    { href: '/documents', label: 'מסמכים', icon: FileText },
+    ...(shell.modules.includes('billing') ? [{ href: '/billing', label: 'חיוב', icon: Receipt }] : []),
+  ];
+
   return (
     <div className="space-y-7">
       <div>
@@ -41,11 +49,34 @@ export default async function DashboardPage() {
         </p>
       </div>
 
+      <div className="flex flex-wrap gap-2.5">
+        {quickActions.map(({ href, label, icon: Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className="flex items-center gap-2 rounded-full border border-hairline bg-raised px-3.5 py-2 text-[0.84rem] text-secondary shadow-sm transition-all hover:border-strong hover:text-primary hover:shadow"
+          >
+            <Icon className="size-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+            {label}
+          </Link>
+        ))}
+      </div>
+
       <div className="grid grid-cols-2 divide-x divide-x-reverse divide-hairline rounded-lg border border-hairline lg:grid-cols-4">
-        <StatTile label="לקוחות פעילים" value={String(customers.length)} />
-        <StatTile label="מסמכים החודש" value={stats.this_month.toLocaleString('he-IL')} note={`${stats.total.toLocaleString('he-IL')} סה״כ`} />
-        <StatTile label="ממתין לאישור" value={String(stats.needs_review)} note={stats.needs_review > 0 ? 'כמה דקות עבודה' : 'הכל מסודר'} />
-        <StatTile label="לא נגעת בהם" value={String(quiet.length)} note="מעל 60 יום" />
+        <StatTile label="לקוחות פעילים" value={String(customers.length)} href="/customers" />
+        <StatTile
+          label="מסמכים החודש"
+          value={stats.this_month.toLocaleString('he-IL')}
+          note={`${stats.total.toLocaleString('he-IL')} סה״כ`}
+          href="/documents"
+        />
+        <StatTile
+          label="ממתין לאישור"
+          value={String(stats.needs_review)}
+          note={stats.needs_review > 0 ? 'כמה דקות עבודה' : 'הכל מסודר'}
+          href="/documents?status=needs_review"
+        />
+        <StatTile label="לא נגעת בהם" value={String(quiet.length)} note="מעל 60 יום" href="#quiet-customers" />
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
@@ -60,19 +91,20 @@ export default async function DashboardPage() {
               {expiring.slice(0, 6).map((d) => {
                 const days = daysUntil(d.expires_on)!;
                 return (
-                  <li key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
-                    <StatusPill tone={days <= 14 ? 'danger' : 'warning'}>
-                      {days < 0 ? 'פג' : `${days} יום`}
-                    </StatusPill>
-                    <div className="min-w-0 flex-1">
-                      <Link href={`/documents/${d.id}`} className="text-[0.88rem] hover:underline">
-                        {d.title}
-                      </Link>
-                      <div className="text-[0.72rem] text-muted">{d.customer_name}</div>
-                    </div>
-                    <button className="shrink-0 rounded-sm border border-strong px-2 py-1 text-[0.72rem] text-secondary">
-                      בקש חדש
-                    </button>
+                  <li key={d.id}>
+                    <Link
+                      href={`/documents/${d.id}`}
+                      className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-sunken"
+                    >
+                      <StatusPill tone={days <= 14 ? 'danger' : 'warning'}>
+                        {days < 0 ? 'פג' : `${days} יום`}
+                      </StatusPill>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[0.88rem]">{d.title}</div>
+                        <div className="text-[0.72rem] text-muted">{d.customer_name}</div>
+                      </div>
+                      <ChevronLeft className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden="true" />
+                    </Link>
                   </li>
                 );
               })}
@@ -86,17 +118,20 @@ export default async function DashboardPage() {
           </header>
           <ul className="divide-y divide-hairline">
             {intake.map((d) => (
-              <li key={d.id} className="flex items-center gap-2.5 px-4 py-2.5 text-[0.84rem]">
-                <span
-                  className="w-16 shrink-0 rounded-sm px-1.5 py-0.5 text-center text-[0.66rem]"
-                  style={{ background: 'var(--surface-sunken)', color: 'var(--text-muted)' }}
+              <li key={d.id}>
+                <Link
+                  href={`/documents/${d.id}`}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-[0.84rem] transition-colors hover:bg-sunken"
                 >
-                  {sourceLabel(d.source)}
-                </span>
-                <Link href={`/documents/${d.id}`} className="min-w-0 flex-1 truncate hover:underline">
-                  {d.title}
+                  <span
+                    className="w-16 shrink-0 rounded-sm px-1.5 py-0.5 text-center text-[0.66rem]"
+                    style={{ background: 'var(--surface-sunken)', color: 'var(--text-muted)' }}
+                  >
+                    {sourceLabel(d.source)}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate">{d.title}</span>
+                  <span className="shrink-0 text-[0.72rem] text-muted">← {d.customer_name}</span>
                 </Link>
-                <span className="shrink-0 text-[0.72rem] text-muted">← {d.customer_name}</span>
               </li>
             ))}
           </ul>
@@ -104,20 +139,24 @@ export default async function DashboardPage() {
       </div>
 
       {quiet.length > 0 ? (
-        <section className="rounded-lg border border-hairline">
+        <section id="quiet-customers" className="scroll-mt-5 rounded-lg border border-hairline">
           <header className="border-b border-hairline px-4 py-3">
             <h2 className="text-[0.98rem]">מי נשכח</h2>
             <p className="mt-0.5 text-[0.76rem] text-muted">לקוחות פעילים שלא קרה איתם כלום זמן רב</p>
           </header>
           <ul className="divide-y divide-hairline">
             {quiet.map((c) => (
-              <li key={c.id} className="flex items-center gap-3 px-4 py-2.5">
-                <Link href={`/customers/${c.id}`} className="min-w-0 flex-1 truncate text-[0.88rem] hover:underline">
-                  {c.display_name}
+              <li key={c.id}>
+                <Link
+                  href={`/customers/${c.id}`}
+                  className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-sunken"
+                >
+                  <span className="min-w-0 flex-1 truncate text-[0.88rem]">{c.display_name}</span>
+                  <span className="shrink-0 text-[0.78rem] text-muted">
+                    {c.days_quiet >= 999 ? 'מעולם' : `לפני ${c.days_quiet} יום`}
+                  </span>
+                  <ChevronLeft className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden="true" />
                 </Link>
-                <span className="shrink-0 text-[0.78rem] text-muted">
-                  {c.days_quiet >= 999 ? 'מעולם' : `לפני ${c.days_quiet} יום`}
-                </span>
               </li>
             ))}
           </ul>

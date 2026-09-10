@@ -36,10 +36,10 @@ export default async function DocumentsPage({
       </div>
 
       <div className="grid grid-cols-2 divide-x divide-x-reverse divide-hairline rounded-lg border border-hairline sm:grid-cols-4">
-        <StatTile label="סה״כ מסמכים" value={stats.total.toLocaleString('he-IL')} />
-        <StatTile label="נקלטו החודש" value={stats.this_month.toLocaleString('he-IL')} />
-        <StatTile label="ממתינים לאישור" value={String(stats.needs_review)} />
-        <StatTile label="תוקף פג בקרוב" value={String(stats.expiring_soon)} note="60 יום" />
+        <StatTile label="סה״כ מסמכים" value={stats.total.toLocaleString('he-IL')} href="/documents" />
+        <StatTile label="נקלטו החודש" value={stats.this_month.toLocaleString('he-IL')} href="/documents" />
+        <StatTile label="ממתינים לאישור" value={String(stats.needs_review)} href="/documents?status=needs_review" />
+        <StatTile label="תוקף פג בקרוב" value={String(stats.expiring_soon)} note="60 יום" href="/documents?expiring=1" />
       </div>
 
       <form className="flex flex-wrap gap-2.5">
