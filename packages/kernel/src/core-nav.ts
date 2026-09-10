@@ -12,6 +12,6 @@ import type { NavEntry } from './types';
  * (ראה `plans.test.ts`) — זה לא, וזה בדיוק ההבדל.
  */
 export const CORE_NAV: readonly NavEntry[] = [
-  { id: 'core.dashboard', label: 'דשבורד', href: '/dashboard', order: 0, realm: 'staff' },
-  { id: 'core.customers', label: 'לקוחות', href: '/customers', order: 5, realm: 'staff' },
+  { id: 'core.dashboard', label: 'דשבורד', href: '/dashboard', order: 0, realm: 'staff', icon: 'LayoutDashboard' },
+  { id: 'core.customers', label: 'לקוחות', href: '/customers', order: 5, realm: 'staff', icon: 'Users' },
 ];

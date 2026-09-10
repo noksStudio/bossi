@@ -32,7 +32,7 @@ export const documents: ModuleManifest = {
     defineEvent('documents.expiring', 'תוקף המסמך עומד לפוג'),
     defineEvent('documents.expired', 'תוקף המסמך פג'),
   ],
-  nav: [{ id: 'documents', label: 'מסמכים', href: '/documents', order: 20, realm: 'staff' }],
+  nav: [{ id: 'documents', label: 'מסמכים', href: '/documents', order: 20, realm: 'staff', icon: 'FileText' }],
   slots: [
     { slot: 'customer.tabs', id: 'documents.tab', label: 'מסמכים', order: 20 },
     { slot: 'customer.overview.cards', id: 'documents.expiring_card', label: 'מסמכים שפג תוקפם', order: 30 },
@@ -70,7 +70,7 @@ export const search: ModuleManifest = {
       handle: async () => {},
     },
   ],
-  nav: [{ id: 'search', label: 'חיפוש', href: '/search', order: 10, realm: 'staff' }],
+  nav: [{ id: 'search', label: 'חיפוש', href: '/search', order: 10, realm: 'staff', icon: 'Search' }],
   slots: [{ slot: 'command.actions', id: 'search.ask', label: 'שאל שאלה', order: 10 }],
   permissions: ['search.query'],
   settings: z.object({
@@ -98,7 +98,7 @@ export const billing: ModuleManifest = {
     defineEvent('billing.payment_received', 'התקבל תשלום'),
     defineEvent('billing.payment_failed', 'תשלום נכשל'),
   ],
-  nav: [{ id: 'billing', label: 'חיוב', href: '/billing', order: 30, realm: 'staff' }],
+  nav: [{ id: 'billing', label: 'חיוב', href: '/billing', order: 30, realm: 'staff', icon: 'Receipt' }],
   slots: [
     { slot: 'customer.tabs', id: 'billing.tab', label: 'כספים', order: 30 },
     { slot: 'customer.overview.cards', id: 'billing.balance_card', label: 'יתרה', order: 10 },
@@ -135,7 +135,7 @@ export const collections: ModuleManifest = {
     { id: 'collections.on_overdue', on: ['billing.invoice_overdue'], handle: async () => {} },
     { id: 'collections.on_payment', on: ['billing.payment_received'], handle: async () => {} },
   ],
-  nav: [{ id: 'collections', label: 'גבייה', href: '/collections', order: 40, realm: 'staff' }],
+  nav: [{ id: 'collections', label: 'גבייה', href: '/collections', order: 40, realm: 'staff', icon: 'HandCoins' }],
   slots: [
     { slot: 'dashboard.widgets', id: 'collections.priority_list', label: 'על מי להתקשר היום', order: 5 },
     { slot: 'customer.actions', id: 'collections.send_reminder', label: 'שלח תזכורת', order: 10 },
@@ -188,7 +188,7 @@ export const retainers: ModuleManifest = {
     // סגירת תקופה מייצרת מקור חיוב — billing מנפיק, בלי שהמודולים מכירים זה את זה.
     { id: 'retainers.bill_closed_period', on: ['retainers.period_closed'], handle: async () => {} },
   ],
-  nav: [{ id: 'retainers', label: 'ריטיינרים', href: '/retainers', order: 25, realm: 'staff' }],
+  nav: [{ id: 'retainers', label: 'ריטיינרים', href: '/retainers', order: 25, realm: 'staff', icon: 'Repeat' }],
   slots: [
     { slot: 'customer.tabs', id: 'retainers.tab', label: 'ריטיינר', order: 15 },
     { slot: 'customer.overview.cards', id: 'retainers.burn_card', label: 'שחיקת ריטיינר', order: 5 },
@@ -220,7 +220,7 @@ export const catalog: ModuleManifest = {
     defineEvent('catalog.product_created', 'נוצר מוצר'),
     defineEvent('catalog.price_changed', 'מחיר השתנה'),
   ],
-  nav: [{ id: 'catalog', label: 'קטלוג', href: '/catalog', order: 50, realm: 'staff' }],
+  nav: [{ id: 'catalog', label: 'קטלוג', href: '/catalog', order: 50, realm: 'staff', icon: 'Tag' }],
   slots: [{ slot: 'customer.tabs', id: 'catalog.prices_tab', label: 'מחירון הלקוח', order: 40 }],
   permissions: ['catalog.read', 'catalog.write', 'catalog.pricing'],
   settings: z.object({ defaultCurrency: z.string().default('ILS'), showListPrice: z.boolean().default(false) }),
@@ -241,7 +241,7 @@ export const inventory: ModuleManifest = {
     defineEvent('inventory.out', 'מלאי אזל'),
     defineEvent('inventory.synced', 'הסתיים סנכרון מול מערכת חיצונית'),
   ],
-  nav: [{ id: 'inventory', label: 'מלאי', href: '/inventory', order: 55, realm: 'staff' }],
+  nav: [{ id: 'inventory', label: 'מלאי', href: '/inventory', order: 55, realm: 'staff', icon: 'Boxes' }],
   slots: [{ slot: 'dashboard.widgets', id: 'inventory.low_stock', label: 'מלאי בסיכון', order: 40 }],
   jobs: [{ id: 'inventory.erp_sync', schedule: '*/15 * * * *', description: 'סנכרון מלאי מול ERP' }],
   permissions: ['inventory.read', 'inventory.write'],
@@ -274,7 +274,7 @@ export const orders: ModuleManifest = {
     { id: 'orders.allocate_stock', on: ['orders.placed'], requires: ['inventory'], handle: async () => {} },
     { id: 'orders.release_stock', on: ['orders.rejected'], requires: ['inventory'], handle: async () => {} },
   ],
-  nav: [{ id: 'orders', label: 'הזמנות', href: '/orders', order: 60, realm: 'staff' }],
+  nav: [{ id: 'orders', label: 'הזמנות', href: '/orders', order: 60, realm: 'staff', icon: 'ShoppingCart' }],
   slots: [
     { slot: 'customer.tabs', id: 'orders.tab', label: 'הזמנות', order: 35 },
     { slot: 'dashboard.widgets', id: 'orders.reorder_due', label: 'הזמנות חוזרות', order: 25 },
@@ -303,11 +303,11 @@ export const portal: ModuleManifest = {
     defineEvent('portal.user_signed_in', 'משתמש פורטל התחבר'),
   ],
   nav: [
-    { id: 'portal.admin', label: 'פורטל', href: '/settings/portal', order: 70, realm: 'staff' },
-    { id: 'portal.home', label: 'ראשי', href: '/p', order: 10, realm: 'portal' },
-    { id: 'portal.documents', label: 'המסמכים שלי', href: '/p/documents', order: 20, realm: 'portal' },
-    { id: 'portal.orders', label: 'הזמנות', href: '/p/orders', order: 30, realm: 'portal' },
-    { id: 'portal.invoices', label: 'חשבוניות', href: '/p/invoices', order: 40, realm: 'portal' },
+    { id: 'portal.admin', label: 'פורטל', href: '/settings/portal', order: 70, realm: 'staff', icon: 'Globe' },
+    { id: 'portal.home', label: 'ראשי', href: '/p', order: 10, realm: 'portal', icon: 'Home' },
+    { id: 'portal.documents', label: 'המסמכים שלי', href: '/p/documents', order: 20, realm: 'portal', icon: 'FileText' },
+    { id: 'portal.orders', label: 'הזמנות', href: '/p/orders', order: 30, realm: 'portal', icon: 'ShoppingCart' },
+    { id: 'portal.invoices', label: 'חשבוניות', href: '/p/invoices', order: 40, realm: 'portal', icon: 'Receipt' },
   ],
   slots: [
     { slot: 'settings.sections', id: 'portal.users', label: 'משתמשי פורטל', order: 30 },
@@ -341,7 +341,7 @@ export const alerts: ModuleManifest = {
     { id: 'alerts.stock_at_risk', on: ['inventory.low', 'inventory.out'], requires: ['inventory'], handle: async () => {} },
     { id: 'alerts.promise_broken', on: ['collections.promise_broken'], requires: ['collections'], handle: async () => {} },
   ],
-  nav: [{ id: 'alerts', label: 'התראות', href: '/alerts', order: 15, realm: 'staff' }],
+  nav: [{ id: 'alerts', label: 'התראות', href: '/alerts', order: 15, realm: 'staff', icon: 'Bell' }],
   slots: [{ slot: 'dashboard.widgets', id: 'alerts.digest', label: 'הבוקר שלך', order: 1 }],
   jobs: [{ id: 'alerts.morning_digest', schedule: '0 7 * * 0-4', description: 'דייג\'סט בוקר' }],
   permissions: ['alerts.read', 'alerts.configure'],
@@ -381,7 +381,7 @@ export const metering: ModuleManifest = {
     { id: 'metering.count_documents', on: ['documents.received'], requires: ['documents'], handle: async () => {} },
     { id: 'metering.count_emails', on: ['collections.reminder_sent'], requires: ['collections'], handle: async () => {} },
   ],
-  nav: [{ id: 'metering', label: 'חבילה וצריכה', href: '/settings/plan', order: 90, realm: 'staff' }],
+  nav: [{ id: 'metering', label: 'חבילה וצריכה', href: '/settings/plan', order: 90, realm: 'staff', icon: 'Gauge' }],
   slots: [
     { slot: 'settings.sections', id: 'metering.plan', label: 'החבילה שלי', order: 10 },
     { slot: 'dashboard.widgets', id: 'metering.usage_bar', label: 'ניצול החבילה', order: 90 },
@@ -425,7 +425,7 @@ export const checks: ModuleManifest = {
     defineEvent('checks.overdue', 'צ׳ק עבר את מועד הפירעון ולא אומת'),
     defineEvent('checks.voided', 'צ׳ק בוטל'),
   ],
-  nav: [{ id: 'checks', label: 'צ׳קים', href: '/checks', order: 35, realm: 'staff' }],
+  nav: [{ id: 'checks', label: 'צ׳קים', href: '/checks', order: 35, realm: 'staff', icon: 'Banknote' }],
   slots: [
     { slot: 'dashboard.widgets', id: 'checks.month', label: 'צ׳קים לפירעון החודש', order: 8 },
     { slot: 'customer.tabs', id: 'checks.tab', label: 'צ׳קים', order: 28 },
@@ -458,8 +458,8 @@ export const leases: ModuleManifest = {
     defineEvent('leases.renewed', 'החוזה חודש'),
   ],
   nav: [
-    { id: 'leases', label: 'חוזי שכירות', href: '/leases', order: 30, realm: 'staff' },
-    { id: 'properties', label: 'נכסים', href: '/properties', order: 31, realm: 'staff' },
+    { id: 'leases', label: 'חוזי שכירות', href: '/leases', order: 30, realm: 'staff', icon: 'ScrollText' },
+    { id: 'properties', label: 'נכסים', href: '/properties', order: 31, realm: 'staff', icon: 'Building' },
   ],
   slots: [
     { slot: 'dashboard.widgets', id: 'leases.renewal_radar', label: 'חוזים לקראת סיום', order: 12 },
@@ -500,7 +500,7 @@ export const signing: ModuleManifest = {
     defineEvent('signing.expired', 'קישור החתימה פג'),
     defineEvent('signing.reminded', 'נשלחה תזכורת לחתימה'),
   ],
-  nav: [{ id: 'signing', label: 'החתמות', href: '/signing', order: 22, realm: 'staff' }],
+  nav: [{ id: 'signing', label: 'החתמות', href: '/signing', order: 22, realm: 'staff', icon: 'PenTool' }],
   slots: [
     { slot: 'dashboard.widgets', id: 'signing.pending', label: 'ממתין לחתימה', order: 15 },
     { slot: 'customer.actions', id: 'signing.send', label: 'שלח לחתימה', order: 5 },

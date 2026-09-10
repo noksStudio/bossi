@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { BossiMark } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { CommandPalette } from '@/components/app/command-palette';
+import { NavIcon } from '@/components/app/nav-icon';
 import { requirePrincipal } from '@/lib/session';
 import { loadShell } from '@/lib/navigation';
 
@@ -32,8 +33,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <li key={item.id}>
                 <Link
                   href={item.href}
-                  className="block rounded-md px-3 py-2 text-[0.88rem] text-secondary transition-colors hover:bg-raised hover:text-primary"
+                  className="flex items-center gap-2.5 rounded-md px-3 py-2 text-[0.88rem] text-secondary transition-colors hover:bg-raised hover:text-primary"
                 >
+                  <NavIcon name={item.icon} className="size-4 shrink-0" />
                   {item.label}
                 </Link>
               </li>

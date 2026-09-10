@@ -9,13 +9,14 @@
     "start": "next start"
   },
   "dependencies": {
+    "@bossi/core": "workspace:*",
+    "@bossi/db": "workspace:*",
     "@bossi/kernel": "workspace:*",
     "@bossi/modules": "workspace:*",
+    "lucide-react": "^1.44.0",
     "next": "^15.1.6",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "@bossi/db": "workspace:*",
-    "@bossi/core": "workspace:*"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",
