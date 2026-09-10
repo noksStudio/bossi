@@ -1,5 +1,6 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { withPlatform } from './client';
+import { seedDefaultPackages } from './feature-packages';
 import { migrate } from './migrate';
 
 /**
@@ -75,6 +76,11 @@ export async function signInPlatform(input: {
   // בלי שהמיגרציות רצו. `migrate()` אידמפוטנטי וזול ברגע שהכול כבר
   // הורץ (שאילתת SELECT יחידה), ולכן רץ בכל ניסיון ולא רק בפעם הראשונה.
   await migrate(() => {});
+
+  // אותו טעם בדיוק: חבילות ברירת המחדל (0012) צריכות להתקיים בלי
+  // שלב נפרד על מסד ייצור חדש. insert-if-missing בלבד — לעולם לא
+  // דורס עריכה שמנהל כבר עשה לחבילה קיימת.
+  await seedDefaultPackages();
 
   if (await isLocked(input.ip)) {
     return { ok: false, reason: 'locked', retryAfterMinutes: LOCKOUT_MINUTES };

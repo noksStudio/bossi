@@ -8,6 +8,7 @@ export * from './documents';
 export * from './leases';
 export * from './metering';
 export * from './notes';
+export * from './feature-packages';
 export * from './platform';
 export * from './platform-auth';
 export * from './portal';

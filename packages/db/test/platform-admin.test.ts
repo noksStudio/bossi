@@ -192,4 +192,16 @@ describe.skipIf(!hasDb)('התחברות אדמין', () => {
       expect(admin?.email).toBe(EMAIL);
     }
   });
+
+  it('אותה התחברות גם מבטיחה את חבילות ברירת המחדל (0012)', async () => {
+    await withPlatform((tx) => tx.query('delete from feature_packages'));
+
+    const result = await signInPlatform({ email: EMAIL, password: PASSWORD, ip: '12.12.12.12' });
+    expect(result.ok).toBe(true);
+
+    const { rows } = await withPlatform((tx) =>
+      tx.query<{ n: string }>('select count(*)::text as n from feature_packages'),
+    );
+    expect(Number(rows[0]?.n)).toBe(5);
+  });
 });
