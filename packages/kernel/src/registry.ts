@@ -8,6 +8,7 @@ import {
   type SlotContribution,
   type SlotId,
 } from './types';
+import { CORE_NAV } from './core-nav';
 import { DependencyError, expandRequirements, topoSort } from './graph';
 
 const EVENT_TYPE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
@@ -179,7 +180,8 @@ export class ModuleRegistry {
     const active = (requires?: ModuleId[]) => (requires ?? []).every((r) => enabled.has(r));
 
     const ports = new Map<string, { moduleId: ModuleId; factory: () => unknown }>();
-    const nav: NavEntry[] = [];
+    // דשבורד ולקוחות תמיד קיימים, לפני שמודול ראשון בכלל נבדק.
+    const nav: NavEntry[] = [...CORE_NAV];
     const slots = new Map<SlotId, SlotContribution[]>();
     const routes = new Map<string, Array<{ moduleId: ModuleId; handler: EventHandler }>>();
     const permissions = new Set<string>();

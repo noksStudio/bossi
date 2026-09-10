@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ModuleRegistry, definePort, defineEvent, type ModuleManifest } from '../src/index';
+import { CORE_NAV, ModuleRegistry, definePort, defineEvent, type ModuleManifest } from '../src/index';
 
 const Port = definePort<{ ping(): string }>('a.port');
 
@@ -76,5 +76,26 @@ describe('ModuleRegistry.validate', () => {
   it('פוסל רישום כפול של מודול', () => {
     const r = new ModuleRegistry().register(mod({ id: 'a' }));
     expect(() => r.register(mod({ id: 'a' }))).toThrow(/כפול/);
+  });
+});
+
+describe('CORE_NAV', () => {
+  it('קיים בכל הרכבה, גם ריקה לגמרי — לא ניתן להסרה', () => {
+    const r = new ModuleRegistry().register(mod({ id: 'a' }));
+    const hrefs = r.resolveTenant([]).nav.map((n) => n.href);
+    for (const entry of CORE_NAV) expect(hrefs).toContain(entry.href);
+  });
+
+  it('לא נספר כמודול — לא מופיע ב-enabled ולא ב-registry.all()', () => {
+    const r = new ModuleRegistry().register(mod({ id: 'a' }));
+    const c = r.resolveTenant(['a']);
+    expect(c.enabled).toEqual(['a']);
+    expect(r.all().map((m) => m.id)).toEqual(['a']);
+  });
+
+  it('מוביל את הסיידבר — order נמוך מכל מודול אמיתי', () => {
+    const r = new ModuleRegistry().register(mod({ id: 'a', nav: [{ id: 'a.x', label: 'x', href: '/x', order: 1 }] }));
+    const nav = r.resolveTenant(['a']).nav;
+    expect(nav[0]!.href).toBe(CORE_NAV[0]!.href);
   });
 });
