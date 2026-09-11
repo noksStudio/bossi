@@ -3,12 +3,13 @@ import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
   asPrincipal, convertLead, createNote, deleteLead, deleteNote, getLead, LEAD_SOURCES, LEAD_STAGES,
-  listNotes, publishEvent, setLeadStage, type LeadStage,
+  listNotes, listTemplates, publishEvent, setLeadStage, type LeadStage,
 } from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
 import { StatusPill } from '@/components/site/chrome';
 import { NotesPanel } from '@/components/app/notes-panel';
 import { LeadStageForm } from '@/components/app/lead-stage-form';
+import { LeadTemplatePicker } from '@/components/app/lead-template-picker';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,9 +39,10 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const principal = await requirePrincipal();
   const { id } = await params;
 
-  const [lead, notes] = await Promise.all([
+  const [lead, notes, templates] = await Promise.all([
     asPrincipal(principal, (tx) => getLead(tx, id)),
     asPrincipal(principal, (tx) => listNotes(tx, { subjectType: 'lead', subjectId: id })),
+    asPrincipal(principal, (tx) => listTemplates(tx)),
   ]);
   if (!lead) notFound();
 
@@ -173,6 +175,12 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               {lead.contact_phone ? <Row label="טלפון"><span dir="ltr">{lead.contact_phone}</span></Row> : null}
             </dl>
           </section>
+
+          <LeadTemplatePicker
+            templates={templates.map((t) => ({ id: t.id, name: t.name, body: t.body }))}
+            contactName={lead.contact_name}
+            businessName={lead.display_name}
+          />
 
           <section className="rounded-lg border border-hairline p-4">
             <h2 className="mb-2.5 text-[0.95rem]">שלב</h2>
