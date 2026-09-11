@@ -42,6 +42,9 @@ export default async function LeadsPage({
           <p className="mt-1 text-[0.88rem] text-muted">{countLabel(leads.length)}</p>
         </div>
         <div className="flex items-center gap-2.5">
+          <Link href="/leads/templates" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">
+            תבניות הודעה
+          </Link>
           <Link href="/leads/import" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">
             ייבוא מ-Google Places
           </Link>
