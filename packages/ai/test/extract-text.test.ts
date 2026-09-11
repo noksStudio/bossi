@@ -57,11 +57,11 @@ describe('extractPdfText', () => {
 
 describe('hasExtractableText', () => {
   it('טקסט קצר מדי (סביר שזו סריקה) נחשב לא מספיק', () => {
-    expect(hasExtractableText({ text: 'x', pageCount: 1 })).toBe(false);
-    expect(hasExtractableText({ text: '   ', pageCount: 1 })).toBe(false);
+    expect(hasExtractableText({ text: 'x' })).toBe(false);
+    expect(hasExtractableText({ text: '   ' })).toBe(false);
   });
 
   it('טקסט אמיתי מספיק', () => {
-    expect(hasExtractableText({ text: 'Invoice Total: 1500 NIS, due 30 days', pageCount: 1 })).toBe(true);
+    expect(hasExtractableText({ text: 'Invoice Total: 1500 NIS, due 30 days' })).toBe(true);
   });
 });
