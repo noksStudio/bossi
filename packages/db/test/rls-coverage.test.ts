@@ -17,7 +17,10 @@ const EXEMPT = new Set(['_migrations']);
  * הפלטפורמה אינו יושב בתוך עסק. הבידוד שלהן אינו RLS אלא הרשאות:
  * ל-`bossi_app` אין עליהן שום גישה, וזה נבדק במפורש למטה.
  */
-const PLATFORM_TABLES = new Set(['platform_sessions', 'platform_audit', 'feature_packages']);
+const PLATFORM_TABLES = new Set([
+  'platform_sessions', 'platform_audit', 'feature_packages',
+  'platform_facebook_groups', 'platform_campaigns', 'platform_prospects',
+]);
 /** `tenants` היא ENABLE ולא FORCE — היא צריכה נתיב יצירה. */
 const NOT_FORCED = new Set(['tenants']);
 
@@ -93,7 +96,10 @@ describe.skipIf(!hasDb)('כיסוי בידוד', () => {
           from pg_class c
           join pg_namespace n on n.oid = c.relnamespace
          where n.nspname = 'public' and c.relkind = 'r'
-           and c.relname not in ('_migrations', 'tenants', 'platform_sessions', 'platform_audit', 'feature_packages')
+           and c.relname not in (
+             '_migrations', 'tenants', 'platform_sessions', 'platform_audit', 'feature_packages',
+             'platform_facebook_groups', 'platform_campaigns', 'platform_prospects'
+           )
            and not exists (
              select 1 from pg_attribute a
               where a.attrelid = c.oid and a.attname = 'tenant_id' and a.attnum > 0

@@ -12,6 +12,7 @@ export * from './notes';
 export * from './feature-packages';
 export * from './platform';
 export * from './platform-auth';
+export * from './platform-marketing';
 export * from './portal';
 export * from './retainers';
 export * from './signing';
