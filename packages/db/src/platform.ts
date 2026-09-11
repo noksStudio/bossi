@@ -27,11 +27,18 @@ export interface TenantSummary {
   documents: number;
   storage_bytes: string;
   last_activity_at: Date | null;
+  /** כניסות ופעולות-אנוש ב-14 הימים האחרונים — הקלט למעורבות (packages/core). */
+  logins_14d: number;
+  actions_14d: number;
 }
+
+const ENGAGEMENT_WINDOW = "interval '14 days'";
 
 export async function listTenants(): Promise<TenantSummary[]> {
   const { rows } = await withPlatform((tx) =>
-    tx.query<TenantSummary & { modules: string; users: string; customers: string; documents: string }>(`
+    tx.query<
+      TenantSummary & { modules: string; users: string; customers: string; documents: string; logins_14d: string; actions_14d: string }
+    >(`
       select t.id, t.slug, t.name, t.business_id,
              coalesce(s.plan, 'starter')                                         as plan,
              t.is_demo, t.created_at,
@@ -44,7 +51,14 @@ export async function listTenants(): Promise<TenantSummary[]> {
              (select count(*) from documents d where d.tenant_id = t.id)::text    as documents,
              coalesce((select sum(d.byte_size) from documents d
                where d.tenant_id = t.id), 0)::text                               as storage_bytes,
-             (select max(e.occurred_at) from events e where e.tenant_id = t.id)   as last_activity_at
+             (select max(e.occurred_at) from events e where e.tenant_id = t.id)   as last_activity_at,
+             (select count(*) from events e
+               where e.tenant_id = t.id and e.type = 'kernel.user_signed_in'
+                 and e.occurred_at >= now() - ${ENGAGEMENT_WINDOW})::text         as logins_14d,
+             (select count(*) from events e
+               where e.tenant_id = t.id and e.actor_type = 'user'
+                 and e.type <> 'kernel.user_signed_in'
+                 and e.occurred_at >= now() - ${ENGAGEMENT_WINDOW})::text         as actions_14d
         from tenants t
         left join subscriptions s on s.tenant_id = t.id
        order by t.is_demo, t.created_at desc
@@ -56,6 +70,8 @@ export async function listTenants(): Promise<TenantSummary[]> {
     users: Number(r.users),
     customers: Number(r.customers),
     documents: Number(r.documents),
+    logins_14d: Number(r.logins_14d),
+    actions_14d: Number(r.actions_14d),
   }));
 }
 

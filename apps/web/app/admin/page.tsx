@@ -1,8 +1,16 @@
 import Link from 'next/link';
 import { listTenants, platformStatus } from '@bossi/db';
 import { PLANS } from '@bossi/modules';
+import { classifyEngagement, ENGAGEMENT_LABELS, ENGAGEMENT_SUGGESTIONS, type EngagementTier } from '@bossi/core';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatTile, StatusPill } from '@/components/site/chrome';
+
+const ENGAGEMENT_TONE: Record<EngagementTier, 'positive' | 'warning' | 'danger' | 'neutral'> = {
+  power: 'positive',
+  engaged: 'neutral',
+  at_risk: 'warning',
+  dormant: 'danger',
+};
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'דיירים · ניהול' };
@@ -82,35 +90,47 @@ function TenantTable({
                 <th className="px-4 py-2 text-end font-normal">מסמכים</th>
                 <th className="px-4 py-2 text-end font-normal">אחסון</th>
                 <th className="px-4 py-2 text-start font-normal">פעילות</th>
+                <th className="px-4 py-2 text-start font-normal">מעורבות (14 יום)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
-              {tenants.map((t) => (
-                <tr key={t.id} className="hover:bg-sunken">
-                  <td className="px-4 py-2.5">
-                    <Link href={`/admin/tenants/${t.id}`} className="hover:underline">
-                      {t.name}
-                    </Link>
-                    <div className="text-[0.7rem] text-muted" dir="ltr">{t.slug}</div>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5">
-                    {PLANS[t.plan as keyof typeof PLANS]?.name ?? t.plan}
-                  </td>
-                  <td className="px-4 py-2.5 text-end tnum text-secondary">{t.modules}</td>
-                  <td className="px-4 py-2.5 text-end tnum text-secondary">{t.users}</td>
-                  <td className="px-4 py-2.5 text-end tnum text-secondary">{t.customers}</td>
-                  <td className="px-4 py-2.5 text-end tnum text-secondary">
-                    {t.documents.toLocaleString('he-IL')}
-                  </td>
-                  <td className="px-4 py-2.5 text-end tnum text-secondary">
-                    {/* היחידה לטינית והמספר ניטרלי — בלי <bdi> "20 GB" מוצג "GB 20". */}
-                    <bdi>{formatBytes(Number(t.storage_bytes))}</bdi>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-2.5 text-[0.78rem] text-muted">
-                    {relative(t.last_activity_at)}
-                  </td>
-                </tr>
-              ))}
+              {tenants.map((t) => {
+                const engagement = classifyEngagement({ logins: t.logins_14d, actions: t.actions_14d });
+                return (
+                  <tr key={t.id} className="hover:bg-sunken">
+                    <td className="px-4 py-2.5">
+                      <Link href={`/admin/tenants/${t.id}`} className="hover:underline">
+                        {t.name}
+                      </Link>
+                      <div className="text-[0.7rem] text-muted" dir="ltr">{t.slug}</div>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      {PLANS[t.plan as keyof typeof PLANS]?.name ?? t.plan}
+                    </td>
+                    <td className="px-4 py-2.5 text-end tnum text-secondary">{t.modules}</td>
+                    <td className="px-4 py-2.5 text-end tnum text-secondary">{t.users}</td>
+                    <td className="px-4 py-2.5 text-end tnum text-secondary">{t.customers}</td>
+                    <td className="px-4 py-2.5 text-end tnum text-secondary">
+                      {t.documents.toLocaleString('he-IL')}
+                    </td>
+                    <td className="px-4 py-2.5 text-end tnum text-secondary">
+                      {/* היחידה לטינית והמספר ניטרלי — בלי <bdi> "20 GB" מוצג "GB 20". */}
+                      <bdi>{formatBytes(Number(t.storage_bytes))}</bdi>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5 text-[0.78rem] text-muted">
+                      {relative(t.last_activity_at)}
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-2.5">
+                      <StatusPill tone={ENGAGEMENT_TONE[engagement.tier]}>
+                        {ENGAGEMENT_LABELS[engagement.tier]}
+                      </StatusPill>
+                      <div className="mt-0.5 text-[0.72rem] text-muted">
+                        {ENGAGEMENT_SUGGESTIONS[engagement.tier]}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
