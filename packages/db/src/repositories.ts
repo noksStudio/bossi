@@ -284,3 +284,84 @@ export async function quickSearchCustomers(
   );
   return rows;
 }
+
+// ── תיוק חכם: התאמת מועמדי חילוץ ללקוח קיים ────────────────────────────
+
+export interface CustomerMatch {
+  customerId: string;
+  displayName: string;
+  confidence: number;
+  matchedBy: Array<'business_id' | 'name'>;
+}
+
+interface MatchSignal {
+  type: 'business_id' | 'name';
+  confidence: number;
+}
+
+const NAME_SIMILARITY_THRESHOLD = 0.3;
+
+/**
+ * מתאימה מועמדי חילוץ (packages/ai: `extractBusinessIds`,
+ * `extractCounterparties`) ללקוח קיים. שני אותות בלתי-תלויים:
+ *
+ * - ח.פ./ת.ז. מדויק — כמעט ודאי, ולכן ביטחון גבוה (0.95). מנוקה
+ *   מתווים לא-ספרתיים משני הצדדים לפני ההשוואה, כדי שעיצוב כמו
+ *   "514-872-910" עדיין יתאים לעמודה הנקייה במסד.
+ * - שם, fuzzy (`pg_trgm`) — מול `display_name` **וגם** `legal_name`.
+ *   השם שמופיע במסמך אמיתי הוא לרוב השם המשפטי המלא ("ד. כהן עיצוב
+ *   בע״מ"), לא שם התצוגה הידידותי במערכת ("דני כהן — סטודיו") —
+ *   בלי `legal_name` ההתאמה הזו הייתה נכשלת לגמרי.
+ *
+ * לקוח שהתאים בכמה אותות בו-זמנית מקבל ביטחון גבוה יותר משל כל אחד
+ * מהם לבד, לפי "לפחות אחד מהם צדק": `1 - מכפלת (1 - ביטחון)` על כל
+ * האותות שהתאימו לו — נוסחה שממזגת כמה עדויות בלי קבוע שרירותי
+ * ל"בונוס", ותמיד נשארת מתחת ל-1.
+ */
+export async function matchCustomers(
+  tx: Tx,
+  candidates: { businessIds?: string[]; names?: string[] },
+  limit = 5,
+): Promise<CustomerMatch[]> {
+  const byId = new Map<string, { displayName: string; signals: MatchSignal[] }>();
+  const add = (id: string, displayName: string, signal: MatchSignal) => {
+    const entry = byId.get(id) ?? { displayName, signals: [] };
+    entry.signals.push(signal);
+    byId.set(id, entry);
+  };
+
+  const ids = [...new Set((candidates.businessIds ?? []).map((id) => id.replace(/\D/g, '')).filter(Boolean))];
+  if (ids.length > 0) {
+    const { rows } = await tx.query<{ id: string; display_name: string }>(
+      `select id, display_name from customers
+        where business_id is not null and regexp_replace(business_id, '\\D', '', 'g') = any($1::text[])`,
+      [ids],
+    );
+    for (const row of rows) add(row.id, row.display_name, { type: 'business_id', confidence: 0.95 });
+  }
+
+  for (const name of candidates.names ?? []) {
+    const trimmed = name.trim();
+    if (trimmed.length < 2) continue;
+    const { rows } = await tx.query<{ id: string; display_name: string; sim: number }>(
+      `select id, display_name,
+              greatest(similarity(display_name, $1), similarity(coalesce(legal_name, ''), $1)) as sim
+         from customers
+        where similarity(display_name, $1) > $2 or similarity(coalesce(legal_name, ''), $1) > $2
+        order by sim desc
+        limit 3`,
+      [trimmed, NAME_SIMILARITY_THRESHOLD],
+    );
+    for (const row of rows) add(row.id, row.display_name, { type: 'name', confidence: Math.min(0.9, Number(row.sim)) });
+  }
+
+  const results: CustomerMatch[] = [...byId].map(([customerId, { displayName, signals }]) => ({
+    customerId,
+    displayName,
+    confidence: Math.round((1 - signals.reduce((product, s) => product * (1 - s.confidence), 1)) * 100) / 100,
+    matchedBy: [...new Set(signals.map((s) => s.type))],
+  }));
+
+  results.sort((a, b) => b.confidence - a.confidence);
+  return results.slice(0, limit);
+}

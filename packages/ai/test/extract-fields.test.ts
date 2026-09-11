@@ -116,6 +116,16 @@ describe('extractBusinessIds', () => {
     const [result] = extractBusinessIds(page(1, 'עוסק פטור מס\' 203236658'));
     expect(result?.value).toBe('203236658');
   });
+
+  it('"ת.ז" נתפסת כמו "ח.פ" — לקוח פרטי מזוהה באותה צורה', () => {
+    const [result] = extractBusinessIds(page(1, 'שם: דני כהן · ת.ז. 514872910'));
+    expect(result?.value).toBe('514872910');
+  });
+
+  it('"ת״ז" (גרשיים) ו"תעודת זהות" (מילה מלאה) שתיהן נתפסות', () => {
+    expect(extractBusinessIds(page(1, 'ת״ז 514872910'))).toHaveLength(1);
+    expect(extractBusinessIds(page(1, 'תעודת זהות 514872910'))).toHaveLength(1);
+  });
 });
 
 describe('extractCounterparties', () => {

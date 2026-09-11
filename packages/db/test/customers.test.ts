@@ -8,6 +8,7 @@ import {
   deleteContact,
   getCustomerDetail,
   listCustomers,
+  matchCustomers,
   migrate,
   publishEvent,
   quickSearchCustomers,
@@ -133,5 +134,47 @@ describe.skipIf(!hasDb)('לקוחות וציר הזמן', () => {
   it('סינון לפי סטטוס', async () => {
     const prospects = await withTenant(alpha, (tx) => listCustomers(tx, { status: 'prospect' }));
     expect(prospects.map((c) => c.display_name)).toEqual(['נורית ברק']);
+  });
+
+  it('matchCustomers: ח.פ מדויק מתאים בביטחון גבוה, גם עם עיצוב שונה', async () => {
+    const [result] = await withTenant(alpha, (tx) =>
+      matchCustomers(tx, { businessIds: ['515-993-027'] }),
+    );
+    expect(result?.customerId).toBe(dani);
+    expect(result?.matchedBy).toEqual(['business_id']);
+    expect(result?.confidence).toBeGreaterThan(0.9);
+  });
+
+  it('matchCustomers: שם משפטי (legal_name) נמצא גם כששם התצוגה שונה לגמרי', async () => {
+    // "ד. כהן עיצוב בע״מ" הוא ה-legal_name; שם התצוגה "דני כהן — סטודיו"
+    // שונה לגמרי — בלי חיפוש גם מול legal_name ההתאמה הזו הייתה נכשלת.
+    const results = await withTenant(alpha, (tx) => matchCustomers(tx, { names: ['ד. כהן עיצוב בע״מ'] }));
+    expect(results.some((r) => r.customerId === dani && r.matchedBy.includes('name'))).toBe(true);
+  });
+
+  it('matchCustomers: התאמה כפולה (ח.פ + שם) מקבלת ביטחון גבוה יותר משל כל אות לבד', async () => {
+    const both = await withTenant(alpha, (tx) =>
+      matchCustomers(tx, { businessIds: ['515993027'], names: ['ד. כהן עיצוב בע״מ'] }),
+    );
+    const idOnly = await withTenant(alpha, (tx) => matchCustomers(tx, { businessIds: ['515993027'] }));
+    const match = both.find((r) => r.customerId === dani);
+    expect(match?.matchedBy.sort()).toEqual(['business_id', 'name']);
+    expect(match!.confidence).toBeGreaterThan(idOnly[0]!.confidence);
+  });
+
+  it('matchCustomers: שם רחוק מדי (מתחת לסף הדמיון) לא מוחזר', async () => {
+    const results = await withTenant(alpha, (tx) => matchCustomers(tx, { names: ['חברה שלא קיימת בכלל'] }));
+    expect(results).toEqual([]);
+  });
+
+  it('matchCustomers: לא חוצה דיירים — ח.פ ושם דומים בדייר אחר לא מתאימים', async () => {
+    const results = await withTenant(beta, (tx) =>
+      matchCustomers(tx, { businessIds: ['515993027'], names: ['ד. כהן עיצוב בע״מ'] }),
+    );
+    expect(results.every((r) => r.customerId !== dani)).toBe(true);
+  });
+
+  it('matchCustomers: בלי מועמדים בכלל מחזירה רשימה ריקה', async () => {
+    expect(await withTenant(alpha, (tx) => matchCustomers(tx, {}))).toEqual([]);
   });
 });
