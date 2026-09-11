@@ -6,10 +6,11 @@ import type { ModuleCategory } from '@bossi/kernel';
  * שהמשתמש והמנהל יראו את אותו חיתוך בדיוק.
  */
 export const CATEGORY_LABELS: Record<ModuleCategory, string> = {
+  sales: 'מכירות',
   documents: 'מסמכים',
   money: 'כספים',
   commerce: 'מסחר',
   intelligence: 'בינה',
 };
 
-export const CATEGORY_ORDER: readonly ModuleCategory[] = ['documents', 'money', 'commerce', 'intelligence'];
+export const CATEGORY_ORDER: readonly ModuleCategory[] = ['sales', 'documents', 'money', 'commerce', 'intelligence'];

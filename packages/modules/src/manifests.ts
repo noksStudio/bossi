@@ -16,6 +16,34 @@ import {
 } from './ports';
 import { stubPort } from './stub';
 
+// ══════════════════════════════════════════════════════════ לידים
+
+/**
+ * צינור מכירות לפני שיש לקוח — לא `customers.status = 'prospect'`
+ * מורחב. ליד הופך ללקוח רק בהמרה מפורשת (`convertLead`), לא ברגע
+ * שהוא "מוכשר" — אין קיצור דרך שמייצר לקוח חצי-גמור.
+ *
+ * הכיתוב על ליד לא מקבל טבלה/פורט משלו — משתמש ב-`notes` הפולימורפית
+ * הקיימת (subject_type='lead'), בדיוק כמו שתוכננה ב-0007.
+ */
+export const leads: ModuleManifest = {
+  id: 'leads',
+  name: 'לידים',
+  description: 'שלבי pipeline לפני שיש לקוח, מקור ומעקב עד המרה.',
+  category: 'sales',
+  emits: [
+    defineEvent('leads.created', 'נוצר ליד חדש'),
+    defineEvent('leads.stage_changed', 'שלב הליד השתנה'),
+    defineEvent('leads.converted', 'הליד הפך ללקוח'),
+  ],
+  nav: [{ id: 'leads', label: 'לידים', href: '/leads', order: 5, realm: 'staff', icon: 'Target' }],
+  permissions: ['leads.read', 'leads.write'],
+  settings: z.object({
+    defaultFollowUpDays: z.number().int().min(0).max(90).default(3),
+  }),
+  tables: ['leads'],
+};
+
 // ══════════════════════════════════════════════════════════ מסמכים
 
 export const documents: ModuleManifest = {
@@ -518,6 +546,7 @@ export const signing: ModuleManifest = {
 };
 
 export const ALL_MODULES = [
+  leads,
   documents,
   search,
   billing,

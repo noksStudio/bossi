@@ -98,7 +98,7 @@ export const PLANS: Record<PlanId, Plan> = {
     tagline: 'הדשבורד מסדר את היום, והמערכת מתחילה לעבוד לבד.',
     monthlyPrice: 1_490,
     setupFee: null,
-    modules: ['documents', 'search', 'billing', 'collections', 'retainers', 'alerts', 'portal', 'metering'],
+    modules: ['leads', 'documents', 'search', 'billing', 'collections', 'retainers', 'alerts', 'portal', 'metering'],
     quotas: {
       storage_gb: q(150, 7),
       documents_processed: q(2_000, 0.3),
@@ -112,6 +112,7 @@ export const PLANS: Record<PlanId, Plan> = {
     },
     highlights: [
       'כל מה שב-Starter Boss',
+      'צינור לידים עם שלבים ומעקב עד המרה ללקוח',
       'דשבורד יומי — מה דורש אותך',
       'חיפוש עם ציטוט מהמקור',
       'ריטיינרים עם תחזית שחיקה',
@@ -129,7 +130,7 @@ export const PLANS: Record<PlanId, Plan> = {
     monthlyPrice: 2_990,
     setupFee: null,
     modules: [
-      'documents', 'search', 'billing', 'collections', 'retainers',
+      'leads', 'documents', 'search', 'billing', 'collections', 'retainers',
       'catalog', 'inventory', 'orders', 'portal', 'alerts', 'metering',
       'checks', 'leases', 'signing',
     ],

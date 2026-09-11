@@ -10,10 +10,11 @@ export const PRESETS = {
   documents: ['documents', 'search', 'metering'],
 
   /** עסקי שירותים — עורכי דין, רו"ח, סוכנויות, יועצים. */
-  services: ['documents', 'search', 'billing', 'collections', 'retainers', 'alerts', 'metering'],
+  services: ['leads', 'documents', 'search', 'billing', 'collections', 'retainers', 'alerts', 'metering'],
 
   /** עסקי מוצר B2B — יבואנים, מפיצים, ספקים. */
   commerce: [
+    'leads',
     'documents',
     'search',
     'billing',
@@ -28,12 +29,13 @@ export const PRESETS = {
 
   /** נדל״ן להשכרה — נכסים, חוזים, צ׳קים דחויים והחתמה. */
   realestate: [
-    'documents', 'search', 'signing', 'billing', 'collections',
+    'leads', 'documents', 'search', 'signing', 'billing', 'collections',
     'leases', 'checks', 'alerts', 'metering',
   ],
 
   /** הכול. */
   full: [
+    'leads',
     'documents',
     'search',
     'billing',

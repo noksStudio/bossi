@@ -1,7 +1,7 @@
 import {
   Banknote, Bell, Boxes, Building, FileSignature, FileText, Gauge,
   Globe, HandCoins, Home, LayoutDashboard, PenTool, Receipt, Repeat,
-  ScrollText, Search, ShoppingCart, Tag, Users, type LucideIcon,
+  ScrollText, Search, ShoppingCart, Tag, Target, Users, type LucideIcon,
 } from 'lucide-react';
 
 /**
@@ -15,7 +15,7 @@ import {
 const ICONS: Record<string, LucideIcon> = {
   LayoutDashboard, Users, FileText, Search, Receipt, HandCoins, Repeat,
   Tag, Boxes, ShoppingCart, Globe, Bell, Gauge, Banknote, ScrollText,
-  Building, FileSignature, PenTool, Home,
+  Building, FileSignature, PenTool, Home, Target,
 };
 
 export function NavIcon({ name, className }: { name?: string; className?: string }) {

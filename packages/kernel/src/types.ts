@@ -128,7 +128,7 @@ export interface JobDef {
 
 // ---------------------------------------------------------------- מודול
 
-export type ModuleCategory = 'documents' | 'money' | 'commerce' | 'intelligence';
+export type ModuleCategory = 'sales' | 'documents' | 'money' | 'commerce' | 'intelligence';
 
 export interface ModuleManifest<S = unknown> {
   readonly id: ModuleId;
