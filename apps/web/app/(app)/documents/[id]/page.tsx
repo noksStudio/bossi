@@ -1,12 +1,16 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { asPrincipal, getDocument } from '@bossi/db';
+import { asPrincipal, DOC_TYPES, getDocument } from '@bossi/db';
 import { requirePrincipal } from '@/lib/session';
+import { DocumentCustomerField } from '@/components/app/document-customer-field';
+import { DocumentTypeField } from '@/components/app/document-type-field';
 import { ShareButton } from '@/components/app/share-button';
 import { StatusPill } from '@/components/site/chrome';
 import {
   daysUntil, docTypeLabel, documentUrl, expiryTone, formatBytes, formatDate, sourceLabel,
 } from '@/lib/documents';
+
+const DOC_TYPE_OPTIONS = Object.entries(DOC_TYPES).map(([value, label]) => ({ value, label }));
 
 export const dynamic = 'force-dynamic';
 
@@ -87,15 +91,20 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
 
         <dl className="space-y-0 rounded-lg border border-hairline p-4 text-[0.88rem]">
           <Row label="לקוח">
-            {doc.customer_id ? (
-              <Link href={`/customers/${doc.customer_id}`} className="hover:underline">
-                {doc.customer_name}
-              </Link>
-            ) : (
-              <span className="text-muted">לא משויך</span>
-            )}
+            <DocumentCustomerField
+              documentId={doc.id}
+              customerId={doc.customer_id}
+              customerName={doc.customer_name}
+            />
           </Row>
-          <Row label="סוג">{docTypeLabel(doc.doc_type)}</Row>
+          <Row label="סוג">
+            <DocumentTypeField
+              documentId={doc.id}
+              currentType={doc.doc_type}
+              currentLabel={docTypeLabel(doc.doc_type)}
+              options={DOC_TYPE_OPTIONS}
+            />
+          </Row>
           <Row label="ערוץ קליטה">{sourceLabel(doc.source)}</Row>
           <Row label="תאריך המסמך">{formatDate(doc.issued_on)}</Row>
           <Row label="נקלט">{formatDate(doc.created_at)}</Row>

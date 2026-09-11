@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
   closePool, createCustomer, createDemoSession, createTenant, createDocument,
   documentStats, expiringDocuments, findDocumentByHash, getDocument, listDocuments, migrate,
-  quietCustomers, recentIntake, search, withPlatform, withTenant,
+  quietCustomers, recentIntake, search, setDocumentCustomer, setDocumentType, withPlatform, withTenant,
 } from '../src/index';
 
 const hasDb = Boolean(process.env['DATABASE_URL']);
@@ -118,6 +118,39 @@ describe.skipIf(!hasDb)('מסמכים', () => {
 
   it('hash שלא קיים מחזיר null', async () => {
     expect(await withTenant(alpha, (tx) => findDocumentByHash(tx, 'no-such-hash'))).toBeNull();
+  });
+
+  it('setDocumentCustomer משייכת ומבטלת שיוך, ולא חוצה דיירים', async () => {
+    const docId = await withTenant(alpha, (tx) =>
+      createDocument(tx, { title: 'לשיוך', filename: 's.pdf', storageKey: 'demo:contract.pdf' }),
+    );
+    expect(await withTenant(alpha, (tx) => setDocumentCustomer(tx, docId, dani))).toBe(true);
+    expect((await withTenant(alpha, (tx) => getDocument(tx, docId)))?.customer_id).toBe(dani);
+
+    expect(await withTenant(alpha, (tx) => setDocumentCustomer(tx, docId, null))).toBe(true);
+    expect((await withTenant(alpha, (tx) => getDocument(tx, docId)))?.customer_id).toBeNull();
+
+    // מזהה מסמך של דייר אחר — הבידוד הוא של המסד, אז 0 שורות מתעדכנות.
+    const otherDoc = (await withTenant(beta, (tx) => listDocuments(tx)))[0]!.id;
+    expect(await withTenant(alpha, (tx) => setDocumentCustomer(tx, otherDoc, dani))).toBe(false);
+  });
+
+  it('setDocumentType מעדכנת ביטחון ל-1 ומוציאה מ-needs_review', async () => {
+    const docId = await withTenant(alpha, (tx) =>
+      createDocument(tx, {
+        title: 'לסיווג ידני', filename: 'r.pdf', storageKey: 'demo:delivery-note.pdf',
+        docType: 'delivery_note', confidence: 0.4, status: 'needs_review',
+      }),
+    );
+    expect(await withTenant(alpha, (tx) => setDocumentType(tx, docId, 'contract'))).toBe(true);
+    const doc = await withTenant(alpha, (tx) => getDocument(tx, docId));
+    expect(doc?.doc_type).toBe('contract');
+    expect(doc?.doc_type_confidence).toBe(1);
+    expect(doc?.status).toBe('filed');
+  });
+
+  it('setDocumentType על מסמך לא קיים מחזירה false', async () => {
+    expect(await withTenant(alpha, (tx) => setDocumentType(tx, '00000000-0000-0000-0000-000000000000', 'contract'))).toBe(false);
   });
 });
 

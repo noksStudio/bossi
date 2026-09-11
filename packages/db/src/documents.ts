@@ -156,6 +156,31 @@ export async function findDocumentByHash(tx: Tx, contentHash: string): Promise<D
   return rows[0] ?? null;
 }
 
+/**
+ * שיוך/ביטול שיוך ידני ללקוח — תמיד ניתן לעריכה, גם אחרי שיוך
+ * אוטומטי (ספרינט ד׳). `null` מסיר שיוך ("לא משויך").
+ */
+export async function setDocumentCustomer(tx: Tx, id: string, customerId: string | null): Promise<boolean> {
+  const { rowCount } = await tx.query('update documents set customer_id = $2 where id = $1', [id, customerId]);
+  return (rowCount ?? 0) > 0;
+}
+
+/**
+ * שינוי סוג ידני — אדם שבחר סוג בעצמו הוא הוודאות הגבוהה ביותר
+ * שיש, ולכן confidence עולה ל-1 והסטטוס יוצא מ-needs_review אם
+ * זו הייתה הסיבה היחידה שהוא היה שם.
+ */
+export async function setDocumentType(tx: Tx, id: string, docType: string): Promise<boolean> {
+  const { rowCount } = await tx.query(
+    `update documents
+        set doc_type = $2, doc_type_confidence = 1,
+            status = case when status = 'needs_review' then 'filed' else status end
+      where id = $1`,
+    [id, docType],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 /** מסמכים חיים שתוקפם עומד לפוג — מזין את "דורש תשומת לב". */
 export async function expiringDocuments(tx: Tx, withinDays = 60): Promise<DocumentRow[]> {
   const { rows } = await tx.query<DocumentRow>(
