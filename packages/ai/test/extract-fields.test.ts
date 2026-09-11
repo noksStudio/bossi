@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  extractAmounts, extractBusinessIds, extractDates, isValidIsraeliBusinessId,
+  extractAmounts, extractBusinessIds, extractCounterparties, extractDates, isValidIsraeliBusinessId,
 } from '../src/extract-fields';
 import type { ExtractedPage } from '../src/extract-text';
 
@@ -115,5 +115,52 @@ describe('extractBusinessIds', () => {
   it('"עוסק פטור" נתפס כמו "עוסק מורשה"', () => {
     const [result] = extractBusinessIds(page(1, 'עוסק פטור מס\' 203236658'));
     expect(result?.value).toBe('203236658');
+  });
+});
+
+describe('extractCounterparties', () => {
+  it('"לכבוד:" נעצר בנקודה האמצעית ולא בולע את התווית שאחריה', () => {
+    const [result] = extractCounterparties(page(1, 'לכבוד: מעבדות תבל בע״מ · ח״פ 512883004'));
+    expect(result?.name).toBe('מעבדות תבל בע״מ');
+    expect(result?.role).toBe('לכבוד');
+  });
+
+  it('"לבין:" ו"בין:" (בלי ל) נתפסים כשני מועמדים נפרדים על אותה שורה', () => {
+    const results = extractCounterparties(
+      page(1, '(״הלקוח״) בין: ד. כהן עיצוב בע״מ, ח״פ לבין: לביא ושות׳'),
+    );
+    // "בין:" ו"לבין:" נבחנים בנפרד — שני הצדדים כמועמדים, לא רק אחד.
+    const roles = results.map((r) => r.role);
+    expect(roles).toContain('צד בהסכם');
+    expect(results.some((r) => r.name === 'לביא ושות׳')).toBe(true);
+  });
+
+  it('"התקבל מאת:" לא נתפס גם כ"מאת" (בלי כפילות)', () => {
+    const results = extractCounterparties(page(1, 'התקבל מאת: ד. כהן עיצוב בע״מ'));
+    expect(results).toHaveLength(1);
+    expect(results[0]?.role).toBe('התקבל מאת');
+  });
+
+  it('"מאת" עצמאי (שולח מייל) מסיר את כתובת האימייל בסוגריים המשולשים', () => {
+    const [result] = extractCounterparties(page(1, 'מאת\t<nissim@example.co.il> ניסים חדד'));
+    expect(result?.name).toBe('ניסים חדד');
+    expect(result?.confidence).toBeLessThan(0.6);
+  });
+
+  it('שורה בלי אף תווית מוכרת לא מחזירה כלום', () => {
+    expect(extractCounterparties(page(1, 'שורה רגילה בלי שום דבר מיוחד'))).toEqual([]);
+  });
+
+  it('שם קצר מדי אחרי תווית (פחות משני תווים) לא נכנס לתוצאות', () => {
+    expect(extractCounterparties(page(1, 'לכבוד: א'))).toEqual([]);
+  });
+
+  it('כל מועמד נושא מספר עמוד נכון', () => {
+    const pages: ExtractedPage[] = [
+      { num: 1, text: 'עמוד ראשון בלי כלום' },
+      { num: 2, text: 'לכבוד: חברת בדיקה בע״מ' },
+    ];
+    const [result] = extractCounterparties(pages);
+    expect(result?.page).toBe(2);
   });
 });

@@ -128,3 +128,71 @@ export function extractBusinessIds(pages: ExtractedPage[]): Array<ExtractedField
   }
   return results;
 }
+
+// ── צד נגדי (counterparty) ──────────────────────────────────────────────
+
+export interface ExtractedCounterparty {
+  name: string;
+  role: string;
+  raw: string;
+  page: number;
+  confidence: number;
+}
+
+interface CounterpartyLabel {
+  role: string;
+  re: RegExp;
+  confidence: number;
+  stripEmail?: boolean;
+}
+
+/**
+ * תוויות שאחריהן מגיע שם הצד השני, לפי סוג מסמך: "לכבוד"/"התקבל מאת"
+ * בחשבונית/קבלה, "מבוטח"/"לבקשת"/"לטובת" באישור ביטוח/ערבות, "לבין"/"בין"
+ * בחוזה (שני הצדדים, במכוון — הצד שהוא בעל הדייר עצמו פשוט לא ימצא
+ * התאמה בשכבת ההתאמה, ראו ספרינט ה׳), "לקוח" בסיכום פגישה, "שם העוסק"
+ * באישור ניכוי מס. "מאת" (בלי "התקבל") הוא שולח מייל — אדם, לא בהכרח
+ * שם החברה, ולכן ביטחון נמוך משמעותית.
+ *
+ * "בין"/"לטובת" מסומנים בביטחון נמוך יותר: מהדוגמאות האמיתיות הם
+ * לרוב הצד שהוא הדייר עצמו ולא הלקוח (הדייר הוא נותן השירות/הנהנה).
+ */
+const COUNTERPARTY_LABELS: CounterpartyLabel[] = [
+  { role: 'לכבוד', re: /לכבוד\s*:/, confidence: 0.85 },
+  { role: 'צד בהסכם', re: /לבין\s*:/, confidence: 0.75 },
+  { role: 'צד בהסכם', re: /(?<!ל)בין\s*:/, confidence: 0.6 },
+  { role: 'התקבל מאת', re: /התקבל\s*מאת\s*:/, confidence: 0.85 },
+  { role: 'מבוטח', re: /מבוטח\s*:/, confidence: 0.85 },
+  { role: 'לבקשת', re: /לבקשת\s*:/, confidence: 0.8 },
+  { role: 'לטובת', re: /לטובת\s*:/, confidence: 0.6 },
+  { role: 'לקוח', re: /לקוח\s*:/, confidence: 0.85 },
+  { role: 'שם העוסק', re: /שם\s*העוסק/, confidence: 0.8 },
+  { role: 'שולח', re: /(?<!התקבל\s)מאת\s*[:\t]?/, confidence: 0.5, stripEmail: true },
+];
+
+// גבול השם: תו הפרדה נפוץ, או תחילת תווית סמוכה ("ח״פ", "עוסק מורשה"),
+// או תחילת ציון תפקיד בסוגריים ("(״הלקוח״)").
+const NAME_BOUNDARY_RE = /[·,\t\n(]|ח\s?["״.]?\s?פ\.?\b|עוסק\s?(?:מורשה|פטור)/;
+
+export function extractCounterparties(pages: ExtractedPage[]): ExtractedCounterparty[] {
+  const results: ExtractedCounterparty[] = [];
+  for (const page of pages) {
+    for (const line of page.text.split('\n')) {
+      for (const label of COUNTERPARTY_LABELS) {
+        const match = label.re.exec(line);
+        if (!match) continue;
+
+        let rest = line.slice(match.index + match[0].length).replace(/^[\s:]+/, '');
+        if (label.stripEmail) rest = rest.replace(/<[^>]*>/g, '');
+        const boundary = rest.search(NAME_BOUNDARY_RE);
+        const name = (boundary >= 0 ? rest.slice(0, boundary) : rest).trim();
+        if (name.length < 2) continue;
+
+        results.push({
+          name, role: label.role, raw: `${match[0]}${name}`, page: page.num, confidence: label.confidence,
+        });
+      }
+    }
+  }
+  return results;
+}
