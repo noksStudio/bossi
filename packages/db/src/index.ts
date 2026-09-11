@@ -15,6 +15,7 @@ export * from './platform-auth';
 export * from './portal';
 export * from './retainers';
 export * from './signing';
+export * from './templates';
 export * from './events';
 export * from './repositories';
 export * from './seed';
