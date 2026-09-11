@@ -5,6 +5,7 @@ export * from './billing';
 export * from './checks';
 export * from './commerce';
 export * from './documents';
+export * from './leads';
 export * from './leases';
 export * from './metering';
 export * from './notes';
