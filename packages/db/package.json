@@ -23,6 +23,7 @@
     "@bossi/core": "workspace:*"
   },
   "devDependencies": {
+    "@bossi/ai": "workspace:*",
     "@types/pg": "^8.11.10",
     "tsx": "^4.19.2"
   }

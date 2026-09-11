@@ -4,6 +4,13 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, UploadCloud } from 'lucide-react';
 
+interface UploadedDoc {
+  id: string;
+  reused: boolean;
+  docType: { value: string; label: string; confidence: number } | null;
+  customerMatch: { customerId: string; displayName: string; confidence: number } | null;
+}
+
 /**
  * אזור העלאה — גרירה או לחיצה, אותו איזור. קובץ אחד או כמה בבת אחת.
  * כל קובץ הופך למסמך בסטטוס "ממתין לאישור" (אין עדיין סיווג אוטומטי),
@@ -29,13 +36,31 @@ export function DocumentUpload({ customerId }: { customerId?: string }) {
 
       const res = await fetch('/api/documents/upload', { method: 'POST', body: form });
       if (!res.ok) throw new Error('upload_failed');
-      const data: { documents: Array<{ id: string; reused: boolean }> } = await res.json();
+      const data: { documents: UploadedDoc[] } = await res.json();
 
       const reused = data.documents.filter((d) => d.reused).length;
       const label = data.documents.length === 1 ? 'מסמך הועלה' : `${data.documents.length} מסמכים הועלו`;
-      setMessage({
-        text: reused > 0 ? `${label} · ${reused} כבר היו קיימים ולא נשמרו פעם נוספת` : `${label} — ממתינים לאישור`,
-      });
+      const lines = [reused > 0 ? `${label} · ${reused} כבר היו קיימים ולא נשמרו פעם נוספת` : label];
+
+      // תיוק אוטומטי הוא הצעה, לא קביעה — מוצג כאן כדי שהמשתמש יידע
+      // מיד מה נקבע, אבל תמיד ניתן לשינוי בעמוד המסמך (הספרינט הקודם).
+      const classified = data.documents.filter((d) => d.docType);
+      const filed = data.documents.filter((d) => d.customerMatch);
+      if (classified.length === 1 && data.documents.length === 1) {
+        lines.push(`זוהה כ${classified[0]!.docType!.label}`);
+      } else if (classified.length > 0) {
+        lines.push(`${classified.length} סווגו אוטומטית`);
+      }
+      if (filed.length === 1 && data.documents.length === 1) {
+        lines.push(`שויך ל${filed[0]!.customerMatch!.displayName} · אפשר לשנות בעמוד המסמך`);
+      } else if (filed.length > 0) {
+        lines.push(`${filed.length} שויכו ללקוח אוטומטית · אפשר לשנות בעמוד כל מסמך`);
+      }
+      if (classified.length === 0 && data.documents.length > 0) {
+        lines.push('ממתינים לאישור');
+      }
+
+      setMessage({ text: lines.join(' — ') });
       router.refresh();
     } catch {
       setMessage({ text: 'ההעלאה נכשלה. נסו שוב.', error: true });

@@ -1,4 +1,17 @@
+/// <reference path="./pdfjs-worker.d.ts" />
 import { PDFParse } from 'pdf-parse';
+// pdfjs-dist (שמאחורי pdf-parse) טוען את ה-worker שלו ב-Node עם
+// import() דינמי, יחסי למיקום הקובץ המקובץ שלו בזמן ריצה. תחת webpack
+// (route handler של Next.js) הנתיב הזה נשבר — הקובץ הפיזי לא מועתק
+// לתיקיית הפלט של ה-route. `globalThis.pdfjsWorker` הוא ה-hook
+// הרשמי של pdfjs-dist בדיוק למקרה הזה: כשהוא קיים, ה-import()
+// הדינמי מדולג לגמרי. import סטטי רגיל (בניגוד לדינמי) כן נארז
+// כמו שצריך על ידי webpack, ולכן זו הדרך היחידה שעובדת גם מקומית
+// (tsx/vitest) וגם דרך Next.js build בלי הבדל בין הסביבות.
+import { WorkerMessageHandler } from 'pdfjs-dist/build/pdf.worker.mjs';
+
+(globalThis as typeof globalThis & { pdfjsWorker?: { WorkerMessageHandler: typeof WorkerMessageHandler } })
+  .pdfjsWorker = { WorkerMessageHandler };
 
 /**
  * חילוץ טקסט מ-PDF — לא AI, לא OCR. פונקציה דטרמיניסטית שקוראת את
