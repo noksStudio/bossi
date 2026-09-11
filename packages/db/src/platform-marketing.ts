@@ -106,17 +106,36 @@ export interface ProspectRow {
   source: string;
   note: string | null;
   contacted: boolean;
+  booked_at: Date | null;
   created_at: Date;
 }
 
 export async function listProspects(): Promise<ProspectRow[]> {
   const { rows } = await withPlatform((tx) =>
     tx.query<ProspectRow>(
-      `select id, name, phone, address, website, source, note, contacted, created_at
-         from platform_prospects order by contacted asc, created_at desc`,
+      `select id, name, phone, address, website, source, note, contacted, booked_at, created_at
+         from platform_prospects order by (booked_at is not null), contacted asc, created_at desc`,
     ),
   );
   return rows;
+}
+
+/**
+ * היעד היחיד שמשנה עכשיו: כמה שיחות מכירה נקבעו **היום**, מכל מקור.
+ *
+ * `Asia/Jerusalem` ולא `now()::date` גולמי — "היום" של בעל העסק, לא
+ * של שרת UTC. הספירה חוצה מקורות בכוונה (Google Places, הפניה, קבוצת
+ * פייסבוק) כי היעד הוא שיחות שנקבעו, לא מאיפה הגיעו.
+ */
+export async function dailyBookedCallCount(): Promise<number> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<{ n: string }>(
+      `select count(*)::text as n from platform_prospects
+        where booked_at is not null
+          and (booked_at at time zone 'Asia/Jerusalem')::date = (now() at time zone 'Asia/Jerusalem')::date`,
+    ),
+  );
+  return Number(rows[0]?.n ?? 0);
 }
 
 export async function createProspect(input: {
@@ -140,6 +159,20 @@ export async function createProspect(input: {
 export async function setProspectContacted(id: string, contacted: boolean): Promise<boolean> {
   const { rowCount } = await withPlatform((tx) =>
     tx.query('update platform_prospects set contacted = $2 where id = $1', [id, contacted]),
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/** קביעה/ביטול של "נקבעה שיחה" — `contacted` נדלק אוטומטית איתה, כי אי אפשר לקבוע שיחה בלי ליצור קשר קודם. */
+export async function setProspectBooked(id: string, booked: boolean): Promise<boolean> {
+  const { rowCount } = await withPlatform((tx) =>
+    tx.query(
+      `update platform_prospects
+          set booked_at = case when $2 then now() else null end,
+              contacted = contacted or $2
+        where id = $1`,
+      [id, booked],
+    ),
   );
   return (rowCount ?? 0) > 0;
 }

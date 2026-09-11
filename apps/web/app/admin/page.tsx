@@ -1,9 +1,12 @@
 import Link from 'next/link';
-import { listTenants, platformStatus } from '@bossi/db';
+import { dailyBookedCallCount, listTenants, platformStatus } from '@bossi/db';
 import { PLANS } from '@bossi/modules';
 import { classifyEngagement, ENGAGEMENT_LABELS, ENGAGEMENT_SUGGESTIONS, type EngagementTier } from '@bossi/core';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatTile, StatusPill } from '@/components/site/chrome';
+
+/** היעד היחיד שקובע עכשיו: שיחות מכירה שנקבעו ביום נתון. ראה ADR-023. */
+const DAILY_CALL_GOAL = 10;
 
 const ENGAGEMENT_TONE: Record<EngagementTier, 'positive' | 'warning' | 'danger' | 'neutral'> = {
   power: 'positive',
@@ -25,13 +28,15 @@ export const metadata = { title: 'דיירים · ניהול' };
 export default async function AdminTenantsPage() {
   await requireAdmin();
 
-  const [tenants, status] = await Promise.all([listTenants(), platformStatus()]);
+  const [tenants, status, bookedToday] = await Promise.all([listTenants(), platformStatus(), dailyBookedCallCount()]);
   const real = tenants.filter((t) => !t.is_demo);
   const demo = tenants.filter((t) => t.is_demo);
   const mrr = real.reduce((sum, t) => sum + (PLANS[t.plan as keyof typeof PLANS]?.monthlyPrice ?? 0), 0);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <DailyCallGoal bookedToday={bookedToday} goal={DAILY_CALL_GOAL} />
+
       <div>
         <h1 className="text-[1.6rem]">דיירים</h1>
         <p className="mt-1 text-[0.88rem] text-muted">
@@ -57,6 +62,48 @@ export default async function AdminTenantsPage() {
       <TenantTable title="עסקים" tenants={real} empty="עוד אין עסקים משלמים." />
       {demo.length > 0 ? <TenantTable title="הדגמה" tenants={demo} empty="" /> : null}
     </div>
+  );
+}
+
+/**
+ * היעד היחיד שחשוב עכשיו, בראש העמוד הראשון שנטען אחרי התחברות —
+ * לא עוד עמודה בטבלה. עד שיש לקוחות ראשונים, כל כניסה ל-/admin
+ * צריכה להתחיל בשאלה "כמה שיחות נקבעו היום", לא "מה מצב הדיירים".
+ */
+function DailyCallGoal({ bookedToday, goal }: { bookedToday: number; goal: number }) {
+  const reached = bookedToday >= goal;
+  const pct = Math.min(100, Math.round((bookedToday / goal) * 100));
+
+  return (
+    <Link
+      href="/admin/marketing?tab=paid"
+      className="block rounded-lg border p-5 transition-colors hover:brightness-[1.03]"
+      style={{
+        borderColor: reached ? 'var(--positive)' : 'var(--accent)',
+        background: reached ? 'var(--positive-quiet)' : 'color-mix(in srgb, var(--accent) 8%, var(--surface-raised))',
+      }}
+    >
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <div className="text-[0.8rem] text-muted">יעד היום · שיחות מכירה שנקבעו</div>
+          <div className="mt-1 flex items-baseline gap-1.5 tnum">
+            <span className="text-[2.2rem] font-semibold leading-none" style={{ color: reached ? 'var(--positive)' : 'var(--accent)' }}>
+              {bookedToday}
+            </span>
+            <span className="text-[1.1rem] text-muted">/ {goal}</span>
+          </div>
+        </div>
+        <div className="text-[0.84rem] font-medium" style={{ color: reached ? 'var(--positive)' : 'var(--accent)' }}>
+          {reached ? '✓ היעד הושג היום' : 'לרשימת הפרוספקטים ←'}
+        </div>
+      </div>
+      <div className="mt-3 h-2 overflow-hidden rounded-full bg-sunken">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: reached ? 'var(--positive)' : 'var(--accent)' }}
+        />
+      </div>
+    </Link>
   );
 }
 
