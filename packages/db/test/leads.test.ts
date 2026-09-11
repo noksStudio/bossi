@@ -135,4 +135,33 @@ describe.skipIf(!hasDb)('לידים', () => {
       withTenant(beta, (tx) => createLead(tx, { displayName: 'ניסיון הפניה חוצת-דיירים', referredByCustomerId: referrer })),
     ).rejects.toThrow();
   });
+
+  // ממצא אמיתי מאימות ידני (0016): "on delete set null" בלי רשימת
+  // עמודות מאפס את tenant_id (not null) יחד עם עמודת ה-FK, ומפיל את
+  // כל השורה. שני ה-FK של leads נבדקים כאן במפורש נגד המקרה הזה.
+  it('מחיקת הלקוח המפנה מאפסת רק את referred_by_customer_id — הליד עצמו שורד', async () => {
+    const referredCustomerId = await withTenant(alpha, (tx) => createCustomer(tx, { displayName: 'ממליץ למחיקה' }));
+    const id = await withTenant(alpha, (tx) =>
+      createLead(tx, { displayName: 'ליד עם מפנה בר-מחיקה', referredByCustomerId: referredCustomerId }),
+    );
+
+    await withTenant(alpha, (tx) => tx.query('delete from customers where id = $1', [referredCustomerId]));
+
+    const lead = await withTenant(alpha, (tx) => getLead(tx, id));
+    expect(lead).not.toBeNull();
+    expect(lead?.referred_by_customer_id).toBeNull();
+    expect(lead?.display_name).toBe('ליד עם מפנה בר-מחיקה');
+  });
+
+  it('מחיקת הלקוח שהליד הומר אליו מאפסת רק את converted_customer_id — הליד עצמו שורד', async () => {
+    const id = await withTenant(alpha, (tx) => createLead(tx, { displayName: 'ליד להמרה ואז מחיקת הלקוח' }));
+    const result = await withTenant(alpha, (tx) => convertLead(tx, id));
+
+    await withTenant(alpha, (tx) => tx.query('delete from customers where id = $1', [result!.customerId]));
+
+    const lead = await withTenant(alpha, (tx) => getLead(tx, id));
+    expect(lead).not.toBeNull();
+    expect(lead?.converted_customer_id).toBeNull();
+    expect(lead?.stage).toBe('won');
+  });
 });

@@ -94,7 +94,9 @@ export default async function LeadsPage({
               {leads.map((l) => (
                 <tr key={l.id} className="transition-colors hover:bg-sunken">
                   <td className="px-4 py-3">
-                    <div className="font-medium">{l.display_name}</div>
+                    <Link href={`/leads/${l.id}`} className="font-medium hover:underline">
+                      {l.display_name}
+                    </Link>
                     {l.contact_name ? <div className="text-[0.75rem] text-muted">{l.contact_name}</div> : null}
                   </td>
                   <td className="px-4 py-3">

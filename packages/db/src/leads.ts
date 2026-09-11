@@ -45,17 +45,19 @@ export interface LeadRow {
   contact_phone: string | null;
   next_follow_up_on: string | null;
   converted_customer_id: string | null;
+  converted_customer_name: string | null;
   lost_reason: string | null;
   created_at: Date;
 }
 
 const SELECT = `
   select l.id, l.display_name, l.stage, l.source, l.referred_by_customer_id,
-         c.display_name as referred_by_name, l.contact_name, l.contact_email,
+         r.display_name as referred_by_name, l.contact_name, l.contact_email,
          l.contact_phone, l.next_follow_up_on::text, l.converted_customer_id,
-         l.lost_reason, l.created_at
+         cv.display_name as converted_customer_name, l.lost_reason, l.created_at
     from leads l
-    left join customers c on c.id = l.referred_by_customer_id
+    left join customers r on r.id = l.referred_by_customer_id
+    left join customers cv on cv.id = l.converted_customer_id
 `;
 
 export interface LeadFilters {
