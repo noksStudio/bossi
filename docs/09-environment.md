@@ -143,6 +143,7 @@ Intelligence.
 | `SENTRY_DSN` · `NEXT_PUBLIC_SENTRY_DSN` | מומלץ מהרגע שיש משתמש אמיתי ראשון |
 | `BOSSI_DEFAULT_PLAN` | חבילת ברירת מחדל לדייר חדש |
 | `BOSSI_SEED_DEMO` | נתוני דמו. **`false` בייצור, תמיד** |
+| `GOOGLE_PLACES_API_KEY` | חיפוש וייבוא לידים מ-Google Places (`/leads/import`). דורש Google Cloud עם חיוב פעיל — לא מסופק על ידינו |
 
 ---
 

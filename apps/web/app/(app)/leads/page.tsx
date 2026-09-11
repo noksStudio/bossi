@@ -41,13 +41,18 @@ export default async function LeadsPage({
           <h1 className="text-[1.6rem]">לידים</h1>
           <p className="mt-1 text-[0.88rem] text-muted">{countLabel(leads.length)}</p>
         </div>
-        <Link
-          href="/leads/new"
-          className="rounded-md px-4 py-2 text-[0.88rem] font-medium text-white"
-          style={{ background: 'var(--accent)' }}
-        >
-          ליד חדש
-        </Link>
+        <div className="flex items-center gap-2.5">
+          <Link href="/leads/import" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">
+            ייבוא מ-Google Places
+          </Link>
+          <Link
+            href="/leads/new"
+            className="rounded-md px-4 py-2 text-[0.88rem] font-medium text-white"
+            style={{ background: 'var(--accent)' }}
+          >
+            ליד חדש
+          </Link>
+        </div>
       </div>
 
       <form className="flex flex-wrap gap-2.5">
