@@ -57,10 +57,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-hairline px-5">
-          <div className="flex items-center gap-2.5 lg:hidden">
+          <Link href="/admin" className="flex items-center gap-2.5 lg:hidden">
             <BossiMark size={20} />
             <span className="truncate text-[0.88rem] font-medium">ניהול הפלטפורמה</span>
-          </div>
+          </Link>
           <div className="ms-auto flex items-center gap-3">
             <ThemeToggle />
           </div>
@@ -69,7 +69,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <main className="min-w-0 flex-1 p-5 pb-24 lg:p-7">{children}</main>
       </div>
 
-      {admin ? <AdminMobileNav /> : null}
+      {admin ? <AdminMobileNav adminEmail={admin.email} /> : null}
     </div>
   );
 }
