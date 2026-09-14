@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { dailyBookedCallCount, listTenants, platformStatus } from '@bossi/db';
+import { dailyBookedCallCount, listDueFollowUps, listTenants, platformStatus } from '@bossi/db';
 import { PLANS } from '@bossi/modules';
 import { classifyEngagement, ENGAGEMENT_LABELS, ENGAGEMENT_SUGGESTIONS, type EngagementTier } from '@bossi/core';
 import { requireAdmin } from '@/lib/platform-session';
@@ -28,7 +28,9 @@ export const metadata = { title: 'דיירים · ניהול' };
 export default async function AdminTenantsPage() {
   await requireAdmin();
 
-  const [tenants, status, bookedToday] = await Promise.all([listTenants(), platformStatus(), dailyBookedCallCount()]);
+  const [tenants, status, bookedToday, dueFollowUps] = await Promise.all([
+    listTenants(), platformStatus(), dailyBookedCallCount(), listDueFollowUps(),
+  ]);
   const real = tenants.filter((t) => !t.is_demo);
   const demo = tenants.filter((t) => t.is_demo);
   const mrr = real.reduce((sum, t) => sum + (PLANS[t.plan as keyof typeof PLANS]?.monthlyPrice ?? 0), 0);
@@ -36,6 +38,7 @@ export default async function AdminTenantsPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <DailyCallGoal bookedToday={bookedToday} goal={DAILY_CALL_GOAL} />
+      {dueFollowUps.length > 0 ? <DueFollowUps items={dueFollowUps} /> : null}
 
       <div>
         <h1 className="text-[1.6rem]">דיירים</h1>
@@ -104,6 +107,41 @@ function DailyCallGoal({ bookedToday, goal }: { bookedToday: number; goal: numbe
         />
       </div>
     </Link>
+  );
+}
+
+/**
+ * "התראה חכמה" בלי תשתית שליחה — לא פוש, לא מייל, לא SMS. חכמה
+ * פירושה כאן: לא רשימה של הכול, רק מה שהגיע זמנו, ממוין מהדחוף
+ * ביותר, ממש מתחת ליעד היומי — אותו עיקרון "מול העיניים" (ADR-023).
+ * ראה ADR-025.
+ */
+function DueFollowUps({ items }: { items: Awaited<ReturnType<typeof listDueFollowUps>> }) {
+  const now = Date.now();
+  return (
+    <section className="overflow-hidden rounded-lg border border-hairline">
+      <header className="flex items-center justify-between border-b border-hairline px-4 py-2.5">
+        <h2 className="text-[0.9rem]">
+          פולואפים שהגיע זמנם <span className="tnum text-[0.78rem] text-muted">({items.length})</span>
+        </h2>
+      </header>
+      <ul className="divide-y divide-hairline">
+        {items.map((p) => {
+          const overdue = new Date(p.next_follow_up_at!).getTime() < now;
+          return (
+            <li key={p.id}>
+              <Link href={`/admin/marketing/prospects/${p.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-sunken">
+                <span className="min-w-0 truncate text-[0.88rem]">{p.name}</span>
+                <span className="shrink-0 text-[0.78rem] font-medium tnum" style={{ color: overdue ? 'var(--danger)' : 'var(--accent)' }}>
+                  {overdue ? 'באיחור · ' : ''}
+                  {new Date(p.next_follow_up_at!).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

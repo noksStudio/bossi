@@ -324,8 +324,8 @@ async function PaidTab({ q }: { q?: string }) {
                   {p.address ? <div className="text-[0.78rem] text-muted">{p.address}</div> : null}
                   {p.phone ? <div className="text-[0.78rem] text-muted" dir="ltr">{p.phone}</div> : null}
                   {p.next_follow_up_at ? (
-                    <div className="mt-1 text-[0.76rem] font-medium" style={{ color: 'var(--accent)' }}>
-                      פולואפ: {new Date(p.next_follow_up_at).toLocaleDateString('he-IL')}
+                    <div className="mt-1 text-[0.76rem] font-medium" style={{ color: new Date(p.next_follow_up_at) < new Date() ? 'var(--danger)' : 'var(--accent)' }}>
+                      פולואפ: {new Date(p.next_follow_up_at).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}
                     </div>
                   ) : null}
                 </div>

@@ -119,12 +119,12 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
         <h2 className="text-[0.95rem]">פולואפ</h2>
         <form action={saveFollowUp} className="mt-2 flex flex-wrap items-center gap-2.5">
           <input
-            type="date" name="followUp" defaultValue={prospect.next_follow_up_at ?? ''}
+            type="datetime-local" name="followUp" defaultValue={toLocalInputValue(prospect.next_follow_up_at)}
             className="rounded-md border border-strong bg-raised px-3 py-2 text-[0.88rem] outline-none"
           />
           <button type="submit" className="rounded-md border border-strong px-3.5 py-2 text-[0.85rem]">שמירה</button>
           {prospect.next_follow_up_at ? (
-            <span className="text-[0.8rem] text-muted">נקבע ל־{formatDate(prospect.next_follow_up_at)}</span>
+            <span className="text-[0.8rem] text-muted">נקבע ל־{formatDateTime(prospect.next_follow_up_at)}</span>
           ) : null}
         </form>
       </section>
@@ -158,10 +158,14 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
   );
 }
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('he-IL');
-}
-
 function formatDateTime(d: Date): string {
   return new Date(d).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+/** ערך ל-input מסוג datetime-local: YYYY-MM-DDTHH:mm בזמן מקומי, לא UTC. */
+function toLocalInputValue(d: Date | null): string {
+  if (!d) return '';
+  const dt = new Date(d);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
 }

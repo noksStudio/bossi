@@ -107,7 +107,7 @@ export interface ProspectRow {
   note: string | null;
   contacted: boolean;
   booked_at: Date | null;
-  next_follow_up_at: string | null;
+  next_follow_up_at: Date | null;
   created_at: Date;
 }
 
@@ -192,12 +192,34 @@ export async function deleteProspect(id: string): Promise<boolean> {
   return (rowCount ?? 0) > 0;
 }
 
-/** תאריך לחזור אליו — `null` מנקה. שדה יחיד, כי בכל רגע יש רק "מתי הפעם הבאה". */
-export async function setProspectFollowUp(id: string, date: string | null): Promise<boolean> {
+/**
+ * מתי לחזור — כולל שעה, לא רק תאריך (0021). `null` מנקה. שדה יחיד,
+ * כי בכל רגע יש רק "מתי הפעם הבאה". `at` הוא מחרוזת ISO-ish מ-input
+ * מסוג `datetime-local` (למשל `2026-09-20T14:30`) — pg מפרש אותה
+ * ביחס לאזור הזמן של השרת, שזה בסדר לכלי פנימי של דייר אחד.
+ */
+export async function setProspectFollowUp(id: string, at: string | null): Promise<boolean> {
   const { rowCount } = await withPlatform((tx) =>
-    tx.query('update platform_prospects set next_follow_up_at = $2 where id = $1', [id, date]),
+    tx.query('update platform_prospects set next_follow_up_at = $2 where id = $1', [id, at]),
   );
   return (rowCount ?? 0) > 0;
+}
+
+/**
+ * פולואפים שדורשים תשומת לב **עכשיו** — הגיעו או עברו. ממוין מהדחוף
+ * ביותר (הכי מאיחור) לפחות דחוף, כדי שהדבר הראשון ברשימה הוא הדבר
+ * הראשון שצריך לטפל בו. זה "החכם" בהתראה: לא רשימה של הכול, רק מה
+ * שרלוונטי הרגע — ראה ADR-025.
+ */
+export async function listDueFollowUps(): Promise<ProspectRow[]> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<ProspectRow>(
+      `select ${PROSPECT_COLUMNS} from platform_prospects
+        where next_follow_up_at is not null and next_follow_up_at <= now()
+        order by next_follow_up_at asc`,
+    ),
+  );
+  return rows;
 }
 
 // ── תיעוד שיחות ─────────────────────────────────────────────────────────
