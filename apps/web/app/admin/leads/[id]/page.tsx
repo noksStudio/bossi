@@ -2,13 +2,13 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import {
   addProspectNote, deleteProspect, getProspect, listProspectNotes,
-  setProspectBooked, setProspectContacted, setProspectFollowUp,
+  setProspectBooked, setProspectContacted, setProspectFollowUp, setProspectIdentifiers,
 } from '@bossi/db';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatusPill } from '@/components/site/chrome';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'פרוספקט · שיווק' };
+export const metadata = { title: 'ליד · ניהול' };
 
 const SOURCE_LABELS: Record<string, string> = {
   google_places: 'Google Places',
@@ -19,12 +19,12 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 /**
- * כרטיס עבודה על פרוספקט בודד — לא עוד עמודות ברשימה. פה נכתב מה
- * קרה בשיחה בפועל ונקבע מתי לחזור, כי "נוצר קשר" (0018) ו"נקבעה שיחה"
- * (0019) הם שני דגלים, לא תיעוד. ראה ADR (0020): הערות בטבלה נפרדת
- * כדי ששיחה שנייה לא תדרוס את התקציר של הראשונה.
+ * כרטיס עבודה על ליד בודד — לא עוד עמודות ברשימה. פה נכתב מה קרה
+ * בשיחה בפועל ונקבע מתי לחזור, כי "נוצר קשר" (0018) ו"נקבעה שיחה"
+ * (0019) הם שני דגלים, לא תיעוד (0020). ת"ז/ח"פ (0022) נערכים כאן —
+ * ברוב המקרים לא ידועים בשלב היצירה, רק כשהעסקה מתקדמת.
  */
-export default async function ProspectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdmin();
   const { id } = await params;
 
@@ -36,22 +36,32 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
     'use server';
     await requireAdmin();
     await setProspectContacted(id, formData.get('contacted') === '1');
-    redirect(`/admin/marketing/prospects/${id}`);
+    redirect(`/admin/leads/${id}`);
   }
 
   async function toggleBooked(formData: FormData) {
     'use server';
     await requireAdmin();
     await setProspectBooked(id, formData.get('booked') === '1');
-    redirect(`/admin/marketing/prospects/${id}`);
+    redirect(`/admin/leads/${id}`);
   }
 
   async function saveFollowUp(formData: FormData) {
     'use server';
     await requireAdmin();
-    const date = String(formData.get('followUp') ?? '').trim();
-    await setProspectFollowUp(id, date || null);
-    redirect(`/admin/marketing/prospects/${id}`);
+    const at = String(formData.get('followUp') ?? '').trim();
+    await setProspectFollowUp(id, at || null);
+    redirect(`/admin/leads/${id}`);
+  }
+
+  async function saveIdentifiers(formData: FormData) {
+    'use server';
+    await requireAdmin();
+    await setProspectIdentifiers(id, {
+      nationalId: String(formData.get('nationalId') ?? '').trim() || null,
+      companyNumber: String(formData.get('companyNumber') ?? '').trim() || null,
+    });
+    redirect(`/admin/leads/${id}`);
   }
 
   async function addNote(formData: FormData) {
@@ -60,20 +70,20 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
     const body = String(formData.get('body') ?? '').trim();
     if (!body) return;
     await addProspectNote(id, body);
-    redirect(`/admin/marketing/prospects/${id}`);
+    redirect(`/admin/leads/${id}`);
   }
 
   async function removeProspect() {
     'use server';
     await requireAdmin();
     await deleteProspect(id);
-    redirect('/admin/marketing?tab=paid');
+    redirect('/admin/leads');
   }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <nav className="text-[0.8rem] text-muted">
-        <Link href="/admin/marketing?tab=paid" className="hover:text-primary">שיווק</Link>
+        <Link href="/admin/leads" className="hover:text-primary">לידים</Link>
         <span className="mx-1.5" aria-hidden="true">/</span>
         <span>{prospect.name}</span>
       </nav>
@@ -112,6 +122,22 @@ export default async function ProspectPage({ params }: { params: Promise<{ id: s
         </form>
         <form action={removeProspect}>
           <button type="submit" className="rounded-md px-3.5 py-2 text-[0.85rem]" style={{ color: 'var(--danger)' }}>הסרה</button>
+        </form>
+      </section>
+
+      <section className="rounded-lg border border-hairline p-4">
+        <h2 className="text-[0.95rem]">זיהוי</h2>
+        <p className="mt-1 text-[0.78rem] text-muted">לחיפוש מהיר לפי ת&quot;ז או ח&quot;פ — בדרך כלל לא ידוע בשלב הליד הראשוני.</p>
+        <form action={saveIdentifiers} className="mt-2.5 flex flex-wrap items-center gap-2.5">
+          <input
+            name="nationalId" placeholder='ת"ז' dir="ltr" defaultValue={prospect.national_id ?? ''}
+            className="min-w-32 rounded-md border border-strong bg-raised px-3 py-2 text-[0.88rem] outline-none"
+          />
+          <input
+            name="companyNumber" placeholder='ח"פ' dir="ltr" defaultValue={prospect.company_number ?? ''}
+            className="min-w-32 rounded-md border border-strong bg-raised px-3 py-2 text-[0.88rem] outline-none"
+          />
+          <button type="submit" className="rounded-md border border-strong px-3.5 py-2 text-[0.85rem]">שמירה</button>
         </form>
       </section>
 

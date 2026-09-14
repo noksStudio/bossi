@@ -79,7 +79,7 @@ function DailyCallGoal({ bookedToday, goal }: { bookedToday: number; goal: numbe
 
   return (
     <Link
-      href="/admin/marketing?tab=paid"
+      href="/admin/leads"
       className="block rounded-lg border p-5 transition-colors hover:brightness-[1.03]"
       style={{
         borderColor: reached ? 'var(--positive)' : 'var(--accent)',
@@ -97,7 +97,7 @@ function DailyCallGoal({ bookedToday, goal }: { bookedToday: number; goal: numbe
           </div>
         </div>
         <div className="text-[0.84rem] font-medium" style={{ color: reached ? 'var(--positive)' : 'var(--accent)' }}>
-          {reached ? '✓ היעד הושג היום' : 'לרשימת הפרוספקטים ←'}
+          {reached ? '✓ היעד הושג היום' : 'לרשימת הלידים ←'}
         </div>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-sunken">
@@ -130,7 +130,7 @@ function DueFollowUps({ items }: { items: Awaited<ReturnType<typeof listDueFollo
           const overdue = new Date(p.next_follow_up_at!).getTime() < now;
           return (
             <li key={p.id}>
-              <Link href={`/admin/marketing/prospects/${p.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-sunken">
+              <Link href={`/admin/leads/${p.id}`} className="flex items-center justify-between gap-3 px-4 py-2.5 hover:bg-sunken">
                 <span className="min-w-0 truncate text-[0.88rem]">{p.name}</span>
                 <span className="shrink-0 text-[0.78rem] font-medium tnum" style={{ color: overdue ? 'var(--danger)' : 'var(--accent)' }}>
                   {overdue ? 'באיחור · ' : ''}

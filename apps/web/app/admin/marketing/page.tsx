@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   createCampaign, createFacebookGroup, createProspect, deleteCampaign, deleteFacebookGroup,
-  deleteProspect, listCampaigns, listFacebookGroups, listProspects, setProspectBooked, setProspectContacted,
+  listCampaigns, listFacebookGroups,
 } from '@bossi/db';
 import { PlacesSearchError, searchPlaces, type PlaceResult } from '@bossi/integrations';
 import { requireAdmin } from '@/lib/platform-session';
@@ -12,20 +12,12 @@ export const metadata = { title: 'שיווק · ניהול' };
 
 type Tab = 'organic' | 'paid';
 
-const PROSPECT_SOURCE_LABELS: Record<string, string> = {
-  google_places: 'Google Places',
-  referral: 'הפניה',
-  facebook_group: 'קבוצת פייסבוק',
-  cold_call: 'פנייה יזומה',
-  other: 'אחר',
-};
-
 /**
- * שיווק הפלטפורמה — איך Bossi עצמה מביאה דיירים משלמים חדשים, לא איך
- * דייר מביא את הלקוחות שלו (זה `/leads`, מודול נפרד לגמרי). שני טאבים
- * דרך `searchParams.tab`, בלי state בצד הלקוח: אורגני (קבוצות פייסבוק
- * — רשימה בלבד, בלי פרסום אוטומטי) וממומן (חיפוש Google Places + רשומת
- * קמפיין לתיעוד בלי מדידה אוטומטית).
+ * שיווק הפלטפורמה — הפעילויות שמביאות לידים ל-Bossi, לא הלידים
+ * עצמם (זו תיקיית `/admin/leads` הנפרדת, ADR-026). שני טאבים דרך
+ * `searchParams.tab`: אורגני (קבוצות פייסבוק — רשימה בלבד, בלי
+ * פרסום אוטומטי) וממומן (חיפוש Google Places + רשומת קמפיין לתיעוד
+ * בלי מדידה אוטומטית).
  */
 export default async function MarketingPage({
   searchParams,
@@ -38,9 +30,12 @@ export default async function MarketingPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-[1.6rem]">שיווק</h1>
-        <p className="mt-1 text-[0.88rem] text-muted">מציאת דיירים משלמים חדשים ל-Bossi.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[1.6rem]">שיווק</h1>
+          <p className="mt-1 text-[0.88rem] text-muted">הפעילויות שמביאות דיירים משלמים חדשים ל-Bossi.</p>
+        </div>
+        <Link href="/admin/leads" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">כל הלידים ←</Link>
       </div>
 
       <div className="flex gap-1.5 border-b border-hairline">
@@ -163,7 +158,7 @@ async function PaidTab({ q }: { q?: string }) {
     }
   }
 
-  const [campaigns, prospects] = await Promise.all([listCampaigns(), listProspects()]);
+  const campaigns = await listCampaigns();
 
   async function importSelected(formData: FormData) {
     'use server';
@@ -175,42 +170,7 @@ async function PaidTab({ q }: { q?: string }) {
       if (!place) continue;
       await createProspect({ name: place.name, phone: place.phone, address: place.address, website: place.website, source: 'google_places' });
     }
-    redirect('/admin/marketing?tab=paid');
-  }
-
-  async function toggleContacted(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    await setProspectContacted(String(formData.get('id')), formData.get('contacted') === '1');
-    redirect('/admin/marketing?tab=paid');
-  }
-
-  async function toggleBooked(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    await setProspectBooked(String(formData.get('id')), formData.get('booked') === '1');
-    redirect('/admin/marketing?tab=paid');
-  }
-
-  async function addProspectManually(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    const name = String(formData.get('name') ?? '').trim();
-    if (!name) return;
-    await createProspect({
-      name,
-      phone: String(formData.get('phone') ?? '').trim() || null,
-      source: String(formData.get('source') ?? 'other'),
-      note: String(formData.get('note') ?? '').trim() || null,
-    });
-    redirect('/admin/marketing?tab=paid');
-  }
-
-  async function removeProspect(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    await deleteProspect(String(formData.get('id')));
-    redirect('/admin/marketing?tab=paid');
+    redirect('/admin/leads');
   }
 
   async function addCampaignAction(formData: FormData) {
@@ -286,72 +246,11 @@ async function PaidTab({ q }: { q?: string }) {
                   ))}
                 </ul>
                 <button type="submit" className="rounded-md px-4 py-2.5 text-[0.9rem] font-medium text-white" style={{ background: 'var(--accent)' }}>
-                  שמירה כפרוספקטים
+                  שמירה כלידים
                 </button>
               </form>
             ) : null}
           </>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <div>
-          <h2 className="text-[1.05rem]">פרוספקטים</h2>
-          <p className="mt-1 text-[0.8rem] text-muted">מכל מקור — לא רק Google Places. הפניה או שיחה מקבוצת פייסבוק נכנסות כאן גם, כדי שהיעד היומי יספור נכון.</p>
-        </div>
-
-        <form action={addProspectManually} className="flex flex-wrap gap-2.5 rounded-lg border border-hairline p-4">
-          <input name="name" placeholder="שם העסק / איש קשר" required className="min-w-40 flex-1 rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none" />
-          <input name="phone" placeholder="טלפון" dir="ltr" className="min-w-36 rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none" />
-          <select name="source" defaultValue="referral" className="rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none">
-            {Object.entries(PROSPECT_SOURCE_LABELS).filter(([v]) => v !== 'google_places').map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-          <input name="note" placeholder="הערה (רשות)" className="min-w-40 flex-1 rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none" />
-          <button type="submit" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">הוספה ידנית</button>
-        </form>
-
-        {prospects.length === 0 ? (
-          <p className="text-[0.88rem] text-muted">עוד אין פרוספקטים שמורים.</p>
-        ) : (
-          <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
-            {prospects.map((p) => (
-              <li key={p.id} className="flex items-start justify-between gap-3 p-3.5">
-                <div className="min-w-0">
-                  <Link href={`/admin/marketing/prospects/${p.id}`} className="text-[0.9rem] font-medium hover:underline">{p.name}</Link>
-                  <div className="text-[0.72rem] text-muted">{PROSPECT_SOURCE_LABELS[p.source] ?? p.source}</div>
-                  {p.address ? <div className="text-[0.78rem] text-muted">{p.address}</div> : null}
-                  {p.phone ? <div className="text-[0.78rem] text-muted" dir="ltr">{p.phone}</div> : null}
-                  {p.next_follow_up_at ? (
-                    <div className="mt-1 text-[0.76rem] font-medium" style={{ color: new Date(p.next_follow_up_at) < new Date() ? 'var(--danger)' : 'var(--accent)' }}>
-                      פולואפ: {new Date(p.next_follow_up_at).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
-                  <form action={toggleContacted}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <input type="hidden" name="contacted" value={p.contacted ? '0' : '1'} />
-                    <button type="submit" className="text-[0.8rem] hover:underline" style={{ color: p.contacted ? 'var(--positive)' : 'var(--text-muted)' }}>
-                      {p.contacted ? '✓ נוצר קשר' : 'סמן שנוצר קשר'}
-                    </button>
-                  </form>
-                  <form action={toggleBooked}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <input type="hidden" name="booked" value={p.booked_at ? '0' : '1'} />
-                    <button type="submit" className="text-[0.8rem] font-medium hover:underline" style={{ color: p.booked_at ? 'var(--positive)' : 'var(--accent)' }}>
-                      {p.booked_at ? '✓ שיחה נקבעה' : 'קבע שיחה'}
-                    </button>
-                  </form>
-                  <form action={removeProspect}>
-                    <input type="hidden" name="id" value={p.id} />
-                    <button type="submit" className="text-[0.8rem] hover:underline" style={{ color: 'var(--danger)' }}>הסרה</button>
-                  </form>
-                </div>
-              </li>
-            ))}
-          </ul>
         )}
       </section>
 

@@ -105,19 +105,42 @@ export interface ProspectRow {
   website: string | null;
   source: string;
   note: string | null;
+  national_id: string | null;
+  company_number: string | null;
   contacted: boolean;
   booked_at: Date | null;
   next_follow_up_at: Date | null;
   created_at: Date;
 }
 
-const PROSPECT_COLUMNS = 'id, name, phone, address, website, source, note, contacted, booked_at, next_follow_up_at, created_at';
+const PROSPECT_COLUMNS = `
+  id, name, phone, address, website, source, note, national_id, company_number,
+  contacted, booked_at, next_follow_up_at, created_at
+`;
 
 export async function listProspects(): Promise<ProspectRow[]> {
   const { rows } = await withPlatform((tx) =>
     tx.query<ProspectRow>(
       `select ${PROSPECT_COLUMNS}
          from platform_prospects order by (booked_at is not null), contacted asc, created_at desc`,
+    ),
+  );
+  return rows;
+}
+
+/**
+ * חיפוש ליד — שם, טלפון, ת"ז או ח"פ. `ILIKE` פשוט על כמה עמודות
+ * מספיק בסדר הגודל הזה (עשרות-מאות שורות); אינדקס טריגרם היה תוספת
+ * מיותרת לפני שיש נתונים שמצדיקים אותה (rule 8).
+ */
+export async function searchProspects(term: string): Promise<ProspectRow[]> {
+  const like = `%${term}%`;
+  const { rows } = await withPlatform((tx) =>
+    tx.query<ProspectRow>(
+      `select ${PROSPECT_COLUMNS} from platform_prospects
+        where name ilike $1 or phone ilike $1 or national_id ilike $1 or company_number ilike $1
+        order by (booked_at is not null), contacted asc, created_at desc`,
+      [like],
     ),
   );
   return rows;
@@ -155,15 +178,33 @@ export async function createProspect(input: {
   website?: string | null;
   source?: string;
   note?: string | null;
+  nationalId?: string | null;
+  companyNumber?: string | null;
 }): Promise<string> {
   const { rows } = await withPlatform((tx) =>
     tx.query<{ id: string }>(
-      `insert into platform_prospects (name, phone, address, website, source, note)
-       values ($1, $2, $3, $4, coalesce($5, 'google_places'), $6) returning id`,
-      [input.name, input.phone ?? null, input.address ?? null, input.website ?? null, input.source ?? null, input.note ?? null],
+      `insert into platform_prospects (name, phone, address, website, source, note, national_id, company_number)
+       values ($1, $2, $3, $4, coalesce($5, 'google_places'), $6, $7, $8) returning id`,
+      [
+        input.name, input.phone ?? null, input.address ?? null, input.website ?? null, input.source ?? null,
+        input.note ?? null, input.nationalId ?? null, input.companyNumber ?? null,
+      ],
     ),
   );
   return rows[0]!.id;
+}
+
+/** ת"ז/ח"פ מתווספים לרוב אחרי היצירה — כשעסקה מתקדמת ולא בשלב הליד הראשוני. */
+export async function setProspectIdentifiers(
+  id: string, input: { nationalId?: string | null; companyNumber?: string | null },
+): Promise<boolean> {
+  const { rowCount } = await withPlatform((tx) =>
+    tx.query(
+      'update platform_prospects set national_id = $2, company_number = $3 where id = $1',
+      [id, input.nationalId ?? null, input.companyNumber ?? null],
+    ),
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function setProspectContacted(id: string, contacted: boolean): Promise<boolean> {
