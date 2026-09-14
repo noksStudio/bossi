@@ -5,6 +5,7 @@ import {
   setProspectBooked, setProspectContacted,
 } from '@bossi/db';
 import { requireAdmin } from '@/lib/platform-session';
+import { LeadList } from '@/components/admin/lead-quick-view';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'לידים · ניהול' };
@@ -107,45 +108,13 @@ export default async function LeadsPage({
       {prospects.length === 0 ? (
         <p className="text-[0.88rem] text-muted">{trimmed ? 'לא נמצא ליד תואם.' : 'עוד אין לידים שמורים.'}</p>
       ) : (
-        <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
-          {prospects.map((p) => (
-            <li key={p.id} className="flex items-start justify-between gap-3 p-3.5">
-              <div className="min-w-0">
-                <Link href={`/admin/leads/${p.id}`} className="text-[0.9rem] font-medium hover:underline">{p.name}</Link>
-                <div className="text-[0.72rem] text-muted">{PROSPECT_SOURCE_LABELS[p.source] ?? p.source}</div>
-                {p.address ? <div className="text-[0.78rem] text-muted">{p.address}</div> : null}
-                {p.phone ? <div className="text-[0.78rem] text-muted" dir="ltr">{p.phone}</div> : null}
-                {p.national_id ? <div className="text-[0.78rem] text-muted" dir="ltr">ת&quot;ז {p.national_id}</div> : null}
-                {p.company_number ? <div className="text-[0.78rem] text-muted" dir="ltr">ח&quot;פ {p.company_number}</div> : null}
-                {p.next_follow_up_at ? (
-                  <div className="mt-1 text-[0.76rem] font-medium" style={{ color: new Date(p.next_follow_up_at) < new Date() ? 'var(--danger)' : 'var(--accent)' }}>
-                    פולואפ: {new Date(p.next_follow_up_at).toLocaleString('he-IL', { dateStyle: 'short', timeStyle: 'short' })}
-                  </div>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
-                <form action={toggleContacted}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <input type="hidden" name="contacted" value={p.contacted ? '0' : '1'} />
-                  <button type="submit" className="text-[0.8rem] hover:underline" style={{ color: p.contacted ? 'var(--positive)' : 'var(--text-muted)' }}>
-                    {p.contacted ? '✓ נוצר קשר' : 'סמן שנוצר קשר'}
-                  </button>
-                </form>
-                <form action={toggleBooked}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <input type="hidden" name="booked" value={p.booked_at ? '0' : '1'} />
-                  <button type="submit" className="text-[0.8rem] font-medium hover:underline" style={{ color: p.booked_at ? 'var(--positive)' : 'var(--accent)' }}>
-                    {p.booked_at ? '✓ שיחה נקבעה' : 'קבע שיחה'}
-                  </button>
-                </form>
-                <form action={removeProspect}>
-                  <input type="hidden" name="id" value={p.id} />
-                  <button type="submit" className="text-[0.8rem] hover:underline" style={{ color: 'var(--danger)' }}>הסרה</button>
-                </form>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <LeadList
+          prospects={prospects}
+          sourceLabels={PROSPECT_SOURCE_LABELS}
+          toggleContacted={toggleContacted}
+          toggleBooked={toggleBooked}
+          removeProspect={removeProspect}
+        />
       )}
     </div>
   );
