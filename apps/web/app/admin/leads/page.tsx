@@ -1,9 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import {
-  createProspect, deleteProspect, listProspects, searchProspects,
-  setProspectBooked, setProspectContacted,
-} from '@bossi/db';
+import { createProspect, listProspects, searchProspects } from '@bossi/db';
 import { requireAdmin } from '@/lib/platform-session';
 import { LeadList } from '@/components/admin/lead-quick-view';
 
@@ -33,20 +30,6 @@ export default async function LeadsPage({
   const trimmed = q?.trim();
   const prospects = trimmed ? await searchProspects(trimmed) : await listProspects();
 
-  async function toggleContacted(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    await setProspectContacted(String(formData.get('id')), formData.get('contacted') === '1');
-    redirect('/admin/leads');
-  }
-
-  async function toggleBooked(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    await setProspectBooked(String(formData.get('id')), formData.get('booked') === '1');
-    redirect('/admin/leads');
-  }
-
   async function addProspectManually(formData: FormData) {
     'use server';
     await requireAdmin();
@@ -60,13 +43,6 @@ export default async function LeadsPage({
       nationalId: String(formData.get('nationalId') ?? '').trim() || null,
       companyNumber: String(formData.get('companyNumber') ?? '').trim() || null,
     });
-    redirect('/admin/leads');
-  }
-
-  async function removeProspect(formData: FormData) {
-    'use server';
-    await requireAdmin();
-    await deleteProspect(String(formData.get('id')));
     redirect('/admin/leads');
   }
 
@@ -111,9 +87,6 @@ export default async function LeadsPage({
         <LeadList
           prospects={prospects}
           sourceLabels={PROSPECT_SOURCE_LABELS}
-          toggleContacted={toggleContacted}
-          toggleBooked={toggleBooked}
-          removeProspect={removeProspect}
         />
       )}
     </div>

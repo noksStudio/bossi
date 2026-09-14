@@ -207,6 +207,23 @@ export async function setProspectIdentifiers(
   return (rowCount ?? 0) > 0;
 }
 
+/**
+ * שמירה אטומית לשדה בודד — לתצוגה מהירה שנשמרת תוך כדי הקלדה, בלי
+ * כפתור "שמירה" נפרד. `field` מוגבל לרשימה סגורה שנבדקת בזמן ריצה
+ * ולא רק בקומפילציה: לעולם לא להרכיב שם עמודה ממחרוזת שהגיעה בלי
+ * בדיקה, גם כשה-caller הוא קוד פנימי.
+ */
+const EDITABLE_PROSPECT_FIELDS = ['phone', 'address', 'website', 'note', 'national_id', 'company_number'] as const;
+export type EditableProspectField = typeof EDITABLE_PROSPECT_FIELDS[number];
+
+export async function updateProspectField(id: string, field: EditableProspectField, value: string | null): Promise<boolean> {
+  if (!EDITABLE_PROSPECT_FIELDS.includes(field)) throw new Error(`שדה לא נתמך לעריכה: ${field}`);
+  const { rowCount } = await withPlatform((tx) =>
+    tx.query(`update platform_prospects set ${field} = $2 where id = $1`, [id, value || null]),
+  );
+  return (rowCount ?? 0) > 0;
+}
+
 export async function setProspectContacted(id: string, contacted: boolean): Promise<boolean> {
   const { rowCount } = await withPlatform((tx) =>
     tx.query('update platform_prospects set contacted = $2 where id = $1', [id, contacted]),
