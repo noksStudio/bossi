@@ -107,17 +107,27 @@ export interface ProspectRow {
   note: string | null;
   contacted: boolean;
   booked_at: Date | null;
+  next_follow_up_at: string | null;
   created_at: Date;
 }
+
+const PROSPECT_COLUMNS = 'id, name, phone, address, website, source, note, contacted, booked_at, next_follow_up_at, created_at';
 
 export async function listProspects(): Promise<ProspectRow[]> {
   const { rows } = await withPlatform((tx) =>
     tx.query<ProspectRow>(
-      `select id, name, phone, address, website, source, note, contacted, booked_at, created_at
+      `select ${PROSPECT_COLUMNS}
          from platform_prospects order by (booked_at is not null), contacted asc, created_at desc`,
     ),
   );
   return rows;
+}
+
+export async function getProspect(id: string): Promise<ProspectRow | null> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<ProspectRow>(`select ${PROSPECT_COLUMNS} from platform_prospects where id = $1`, [id]),
+  );
+  return rows[0] ?? null;
 }
 
 /**
@@ -180,4 +190,44 @@ export async function setProspectBooked(id: string, booked: boolean): Promise<bo
 export async function deleteProspect(id: string): Promise<boolean> {
   const { rowCount } = await withPlatform((tx) => tx.query('delete from platform_prospects where id = $1', [id]));
   return (rowCount ?? 0) > 0;
+}
+
+/** תאריך לחזור אליו — `null` מנקה. שדה יחיד, כי בכל רגע יש רק "מתי הפעם הבאה". */
+export async function setProspectFollowUp(id: string, date: string | null): Promise<boolean> {
+  const { rowCount } = await withPlatform((tx) =>
+    tx.query('update platform_prospects set next_follow_up_at = $2 where id = $1', [id, date]),
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+// ── תיעוד שיחות ─────────────────────────────────────────────────────────
+//
+// טבלה נפרדת ולא עוד עמודת טקסט על הפרוספקט — שיחה שנייה לא דורסת את
+// התקציר של הראשונה. ראה 0020.
+
+export interface ProspectNoteRow {
+  id: string;
+  prospect_id: string;
+  body: string;
+  created_at: Date;
+}
+
+export async function listProspectNotes(prospectId: string): Promise<ProspectNoteRow[]> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<ProspectNoteRow>(
+      'select id, prospect_id, body, created_at from platform_prospect_notes where prospect_id = $1 order by created_at desc',
+      [prospectId],
+    ),
+  );
+  return rows;
+}
+
+export async function addProspectNote(prospectId: string, body: string): Promise<string> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<{ id: string }>(
+      'insert into platform_prospect_notes (prospect_id, body) values ($1, $2) returning id',
+      [prospectId, body],
+    ),
+  );
+  return rows[0]!.id;
 }

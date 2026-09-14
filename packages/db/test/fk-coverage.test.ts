@@ -15,10 +15,12 @@ import { closePool, migrate, withPlatform } from '../src/index';
 const hasDb = Boolean(process.env['DATABASE_URL']);
 
 /**
- * `tenants` הוא היעד היחיד שמותר להצביע עליו במפתח פשוט — הוא **הדייר
- * עצמו**, לא ישות בתוכו, ואין לו `tenant_id` להצטרף אליו.
+ * יעדים שמותר להצביע עליהם במפתח פשוט: `tenants` הוא **הדייר עצמו**,
+ * לא ישות בתוכו. `platform_prospects` שייך לריאלם הפלטפורמה (0018) —
+ * בלי `tenant_id` מלכתחילה, כמו `tenants` — ולכן FK אליו (0020) פשוט
+ * ולא מורכב, בדיוק כמו ש-`platform_audit` מצביע על `tenants(id)`.
  */
-const NOT_TENANT_SCOPED = new Set(['tenants']);
+const NOT_TENANT_SCOPED = new Set(['tenants', 'platform_prospects']);
 
 interface ForeignKey {
   name: string;

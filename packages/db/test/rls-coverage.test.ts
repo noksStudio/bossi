@@ -20,6 +20,7 @@ const EXEMPT = new Set(['_migrations']);
 const PLATFORM_TABLES = new Set([
   'platform_sessions', 'platform_audit', 'feature_packages',
   'platform_facebook_groups', 'platform_campaigns', 'platform_prospects',
+  'platform_prospect_notes',
 ]);
 /** `tenants` היא ENABLE ולא FORCE — היא צריכה נתיב יצירה. */
 const NOT_FORCED = new Set(['tenants']);
@@ -98,7 +99,8 @@ describe.skipIf(!hasDb)('כיסוי בידוד', () => {
          where n.nspname = 'public' and c.relkind = 'r'
            and c.relname not in (
              '_migrations', 'tenants', 'platform_sessions', 'platform_audit', 'feature_packages',
-             'platform_facebook_groups', 'platform_campaigns', 'platform_prospects'
+             'platform_facebook_groups', 'platform_campaigns', 'platform_prospects',
+             'platform_prospect_notes'
            )
            and not exists (
              select 1 from pg_attribute a

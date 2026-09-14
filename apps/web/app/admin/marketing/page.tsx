@@ -319,10 +319,15 @@ async function PaidTab({ q }: { q?: string }) {
             {prospects.map((p) => (
               <li key={p.id} className="flex items-start justify-between gap-3 p-3.5">
                 <div className="min-w-0">
-                  <div className="text-[0.9rem] font-medium">{p.name}</div>
+                  <Link href={`/admin/marketing/prospects/${p.id}`} className="text-[0.9rem] font-medium hover:underline">{p.name}</Link>
                   <div className="text-[0.72rem] text-muted">{PROSPECT_SOURCE_LABELS[p.source] ?? p.source}</div>
                   {p.address ? <div className="text-[0.78rem] text-muted">{p.address}</div> : null}
                   {p.phone ? <div className="text-[0.78rem] text-muted" dir="ltr">{p.phone}</div> : null}
+                  {p.next_follow_up_at ? (
+                    <div className="mt-1 text-[0.76rem] font-medium" style={{ color: 'var(--accent)' }}>
+                      פולואפ: {new Date(p.next_follow_up_at).toLocaleDateString('he-IL')}
+                    </div>
+                  ) : null}
                 </div>
                 <div className="flex shrink-0 flex-wrap items-center justify-end gap-3">
                   <form action={toggleContacted}>
