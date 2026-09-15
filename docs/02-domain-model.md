@@ -227,6 +227,7 @@ invoice.issued / invoice.due_soon / invoice.overdue / invoice.escalated
 payment.received / payment.failed / payment.partial
 promise.made / promise.kept / promise.broken
 order.placed / order.approved / order.shipped
+order.line_ready — שורת הזמנה הגיעה לשלב "מוכן" (production_stage, 0023)
 inventory.low / inventory.out
 ```
 

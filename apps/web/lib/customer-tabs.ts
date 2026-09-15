@@ -10,6 +10,8 @@ import type { SlotContribution } from '@bossi/kernel';
 const ROUTES: Record<string, (customerId: string) => string> = {
   'checks.tab': (id) => `/customers/${id}/checks`,
   'documents.tab': (id) => `/customers/${id}/documents`,
+  'billing.tab': (id) => `/customers/${id}/billing`,
+  'orders.tab': (id) => `/customers/${id}/orders`,
 };
 
 export interface CustomerTab {

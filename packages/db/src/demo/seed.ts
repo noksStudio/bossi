@@ -3,16 +3,24 @@ import { createTenant, withPlatform, withPrincipal, withTenant, type Tx } from '
 import { createContact, createCustomer, createUser, updateCustomer } from '../repositories';
 import { createDocument } from '../documents';
 import { publishEvent } from '../events';
+import { setUserPermission } from '../user-permissions';
 import {
-  seedBilling, seedCommerce, seedPortalUsers, seedRetainers, type SeedCustomer,
+  seedBilling, seedCommerce, seedManufacturing, seedPortalUsers, seedRetainers, type SeedCustomer,
 } from './business';
 import {
   COMMERCE_CUSTOMERS,
   CORRESPONDENCE_SUBJECTS,
+  DBPLAST_CUSTOMERS,
   DOC_TEMPLATES,
   SERVICES_CUSTOMERS,
   type DemoCustomer,
 } from './data';
+
+type CommerceSeeder = (
+  tx: Tx,
+  customers: SeedCustomer[],
+  opts: { random: () => number },
+) => Promise<{ products: number; orders: number }>;
 
 /**
  * זריעת דמו.
@@ -72,12 +80,15 @@ async function seedTenant(
     modules: readonly ModuleId[];
     ownerEmail: string;
     ownerName: string;
-    staff: Array<{ email: string; name: string; role: string }>;
+    /** `productionOnly` מקבל אך ורק את הרשאת `orders.production` — חריג פר-משתמש, לא תפקיד (ADR-028). */
+    staff: Array<{ email: string; name: string; role: string; productionOnly?: boolean }>;
     customers: DemoCustomer[];
     invoicePrefix: string;
     invoiceBase: number;
     invoiceSubjects: string[];
     seed: number;
+    /** ברירת המחדל היא `seedCommerce` (B2B אספקה טכנית) — דייר ייצור מעביר `seedManufacturing`. */
+    commerceSeeder?: CommerceSeeder;
   },
   log: (m: string) => void,
 ): Promise<SeedResult> {
@@ -253,8 +264,18 @@ async function seedTenant(
       : 0;
 
     const commerce = opts.modules.includes('catalog')
-      ? await seedCommerce(tx, seedCustomers, { random })
+      ? await (opts.commerceSeeder ?? seedCommerce)(tx, seedCustomers, { random })
       : { products: 0, orders: 0 };
+
+    // הרשאת "לוח ייצור בלבד" היא חריג פר-משתמש, לא תפקיד — נכתבת כאן,
+    // תחת הזהות של הבעלים, כי מדיניות ה-RLS על `user_permissions`
+    // (0007) מרשה כתיבה רק לבעלים.
+    for (const [i, s] of opts.staff.entries()) {
+      if (!s.productionOnly) continue;
+      const userId = staffIds[i];
+      if (!userId) continue;
+      await setUserPermission(tx, { userId, permission: 'orders.production', granted: true });
+    }
 
     const portalUsers = opts.modules.includes('portal')
       ? await seedPortalUsers(tx, seedCustomers, {
@@ -396,6 +417,7 @@ function filenameFor(type: string, source: string, n: number): string {
 export async function seedDemo(log: (m: string) => void = console.log): Promise<{
   services: SeedResult;
   commerce: SeedResult;
+  manufacturing: SeedResult;
 }> {
   log('זורע דיירי דמו…');
 
@@ -458,7 +480,40 @@ export async function seedDemo(log: (m: string) => void = console.log): Promise<
     log,
   );
 
-  return { services, commerce };
+  const manufacturing = await seedTenant(
+    {
+      slug: 'demo-dbplast',
+      name: 'די בי פלאסט',
+      businessId: '513660824',
+      plan: 'mega',
+      // מפורש, לא preset: בלי מלאי ובלי פורטל בגל הזה (ADR-028) — "לא
+      // בשלב הראשון" לפי האפיון, ואין תועלת לסעיף תפריט שמוביל לכלום.
+      modules: ['documents', 'search', 'billing', 'collections', 'catalog', 'orders', 'alerts', 'metering'],
+      ownerEmail: 'demo-dbplast@bossi.co.il',
+      ownerName: 'רפי דביר',
+      staff: [
+        { email: 'office@demo-dbplast.co.il', name: 'מירב פרץ', role: 'manager' },
+        // ההרשאה היחידה שהוא מקבל היא `orders.production` — לא תפקיד
+        // חדש, חריג פר-משתמש מעל `staff` (ADR-028).
+        { email: 'production@demo-dbplast.co.il', name: 'שלמה בוזגלו', role: 'staff', productionOnly: true },
+      ],
+      customers: DBPLAST_CUSTOMERS,
+      invoicePrefix: 'חי',
+      invoiceBase: 6200,
+      invoiceSubjects: [
+        'אספקת בדים להזמנה',
+        'עבודת הדפסה וגימור',
+        'ייצור בד מותאם ללקוח',
+        'חידוש מלאי בדים',
+        'הזמנת ריפוד תעשייתי',
+      ],
+      seed: 314159265,
+      commerceSeeder: seedManufacturing,
+    },
+    log,
+  );
+
+  return { services, commerce, manufacturing };
 }
 
 /** מוחק את דיירי הדמו בלבד. דיירים אמיתיים לא נגעים. */

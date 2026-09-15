@@ -13,7 +13,7 @@ if (reset) {
 const result = await seedDemo();
 await seedRealEstate();
 console.log(
-  `\nמוכן. ${result.services.documents + result.commerce.documents} מסמכים, ` +
-    `${result.services.events + result.commerce.events} אירועים.`,
+  `\nמוכן. ${result.services.documents + result.commerce.documents + result.manufacturing.documents} מסמכים, ` +
+    `${result.services.events + result.commerce.events + result.manufacturing.events} אירועים.`,
 );
 await closePool();

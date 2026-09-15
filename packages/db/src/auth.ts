@@ -1,4 +1,5 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
+import type { PermissionOverride } from '@bossi/core';
 import { withPlatform, withPrincipal, type Tx } from './client';
 
 /**
@@ -20,6 +21,8 @@ export interface Principal {
   email: string;
   name: string;
   role: 'owner' | 'manager' | 'staff' | 'bookkeeper';
+  /** חריגי הרשאה פר-משתמש (`user_permissions`) — ל-`can()` מ-`@bossi/core`. */
+  overrides: PermissionOverride[];
 }
 
 /** 32 בתים אקראיים ב-base64url. ~256 ביט אנטרופיה. */
@@ -118,7 +121,17 @@ export async function resolveSession(sessionToken: string): Promise<Principal | 
       user_name: string;
       user_role: Principal['role'];
     }>('select * from auth_resolve_session($1)', [hash(sessionToken)]);
-    return rows[0] ?? null;
+    const row = rows[0];
+    if (!row) return null;
+
+    // נשלף כאן, בתוך `withPlatform`, ולא דרך שאילתה נפרדת תחת
+    // `withPrincipal`: הרגע הזה הוא עדיין פענוח זהות, לפני שיש הקשר
+    // דייר — בדיוק כמו שליפת התפקיד עצמו שורה למעלה.
+    const overrides = await tx.query<{ permission: string; granted: boolean }>(
+      'select permission, granted from user_permissions where tenant_id = $1 and user_id = $2',
+      [row.tenant_id, row.user_id],
+    );
+    return { ...row, overrides: overrides.rows };
   });
 
   if (!row) return null;
@@ -130,6 +143,7 @@ export async function resolveSession(sessionToken: string): Promise<Principal | 
     email: row.user_email,
     name: row.user_name,
     role: row.user_role,
+    overrides: row.overrides,
   };
 }
 

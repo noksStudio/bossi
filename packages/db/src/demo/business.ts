@@ -561,6 +561,158 @@ export async function seedCommerce(
   return { products: CATALOG.length, orders };
 }
 
+// ═══════════════════════════════════════════════════════ ייצור (בדים)
+
+/**
+ * קטלוג של בית מלאכה לבדים.
+ *
+ * שלא כמו `seedCommerce`: כאן ה"וריאציה" של המוצר — צבע וסוג עבודה —
+ * לא יושבת על המוצר בקטלוג אלא נקבעת בזמן ההזמנה, שורה-שורה (0023).
+ * הקטלוג עצמו הוא סוגי בד בלבד.
+ */
+const FABRIC_CATALOG: Array<{
+  sku: string; name: string; category: string; unit: string; price: number; cost: number;
+  onHand: number; reorder: number; lead: number;
+}> = [
+  { sku: 'FBR-COT100', name: 'בד כותנה 100%',        category: 'כותנה',  unit: 'מ׳', price: 24.9,  cost: 15.2, onHand: 840, reorder: 200, lead: 10 },
+  { sku: 'FBR-COT-PRT', name: 'בד כותנה מודפס',       category: 'כותנה',  unit: 'מ׳', price: 32.5,  cost: 21.0, onHand: 260, reorder: 150, lead: 14 },
+  { sku: 'FBR-POLY',    name: 'בד פוליאסטר',          category: 'סינתטי', unit: 'מ׳', price: 18.0,  cost: 10.8, onHand: 1120,reorder: 300, lead: 7 },
+  { sku: 'FBR-LINEN',   name: 'בד פשתן',              category: 'טבעי',   unit: 'מ׳', price: 46.0,  cost: 31.0, onHand: 95,  reorder: 80,  lead: 21 },
+  { sku: 'FBR-VELVET',  name: 'בד קטיפה',             category: 'עיצוב',  unit: 'מ׳', price: 58.0,  cost: 39.0, onHand: 0,   reorder: 40,  lead: 25 },
+  { sku: 'FBR-TRICOT',  name: 'בד טריקו אלסטי',       category: 'סינתטי', unit: 'מ׳', price: 22.5,  cost: 14.1, onHand: 410, reorder: 150, lead: 10 },
+  { sku: 'FBR-DENIM',   name: 'בד ג׳ינס',             category: 'טבעי',   unit: 'מ׳', price: 36.0,  cost: 23.5, onHand: 180, reorder: 90,  lead: 18 },
+  { sku: 'FBR-CANVAS',  name: 'בד קנבס טכני',         category: 'טכני',   unit: 'מ׳', price: 41.0,  cost: 27.0, onHand: 220, reorder: 100, lead: 14 },
+  { sku: 'FBR-SATIN',   name: 'בד סאטן',              category: 'עיצוב',  unit: 'מ׳', price: 39.0,  cost: 25.0, onHand: 60,  reorder: 60,  lead: 20 },
+  { sku: 'FBR-FELT',    name: 'בד לבד',               category: 'טכני',   unit: 'מ׳', price: 16.5,  cost: 9.4,  onHand: 340, reorder: 120, lead: 10 },
+];
+
+const COLORS = ['לבן', 'שחור', 'כחול', 'אדום', 'ירוק', 'בז׳'];
+const JOB_TYPES = ['הדפסה', 'גזירה', 'תפירה', 'גימור'];
+
+export async function seedManufacturing(
+  tx: Tx,
+  customers: SeedCustomer[],
+  opts: { random: () => number },
+): Promise<{ products: number; orders: number }> {
+  const { random } = opts;
+  const between = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
+  const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(random() * xs.length)]!;
+
+  const ids = new Map<string, string>();
+  for (const p of FABRIC_CATALOG) {
+    const id = await createProduct(tx, {
+      sku: p.sku, name: p.name, category: p.category, unit: p.unit,
+      listPrice: p.price.toFixed(2), costPrice: p.cost.toFixed(2),
+    });
+    ids.set(p.sku, id);
+    await setStock(tx, { productId: id, onHand: p.onHand.toFixed(2), allocated: '0', reorderPoint: p.reorder.toFixed(2), leadDays: p.lead });
+  }
+
+  const bigBuyers = customers.slice(0, 3);
+  for (const [i, customer] of bigBuyers.entries()) {
+    for (const p of FABRIC_CATALOG.slice(i * 3, i * 3 + 3)) {
+      await tx.query(
+        `insert into customer_prices (tenant_id, customer_id, product_id, price, min_quantity)
+         values (current_tenant(), $1, $2, $3, $4) on conflict do nothing`,
+        [customer.id, ids.get(p.sku), (p.price * (0.9 - i * 0.02)).toFixed(2), i === 0 ? 100 : 1],
+      );
+    }
+  }
+
+  let orderNumber = 5100;
+  let orders = 0;
+
+  const place = async (
+    customer: SeedCustomer,
+    skus: string[],
+    o: { status: string; daysAgo: number; channel?: string; hold?: string | null; placedBy?: string },
+  ) => {
+    const lines = skus.map((sku) => {
+      const product = FABRIC_CATALOG.find((p) => p.sku === sku)!;
+      return {
+        productId: ids.get(sku)!,
+        sku,
+        name: product.name,
+        quantity: String(between(15, 180)),
+        unitPrice: (product.price * (0.88 + random() * 0.1)).toFixed(2),
+        color: pick(COLORS),
+        jobType: pick(JOB_TYPES),
+      };
+    });
+    const number = `יצ-${orderNumber++}`;
+    const orderId = await createOrder(tx, {
+      customerId: customer.id,
+      number,
+      channel: o.channel ?? 'phone',
+      status: o.status,
+      placedAt: daysAgo(o.daysAgo),
+      placedBy: o.placedBy ?? null,
+      neededBy: iso(daysAhead(between(4, 18))),
+      holdReason: o.hold ?? null,
+      lines,
+    });
+    orders++;
+    await publishEvent(tx, {
+      type: o.status === 'pending' ? 'orders.placed' : o.status === 'shipped' ? 'orders.shipped' : 'orders.approved',
+      actorType: 'user', customerId: customer.id, occurredAt: daysAgo(o.daysAgo), payload: { number },
+    });
+    return orderId;
+  };
+
+  /** מקדם שורה בהזמנה מסוימת לשלב ייצור נתון — לזרוע גיוון על לוח הייצור. */
+  const advance = async (orderId: string, sku: string, stage: 'started' | 'near_completion' | 'ready', notified: boolean) => {
+    await tx.query(
+      `update order_lines
+          set production_stage = $3,
+              ready_at = case when $3 = 'ready' then now() - (random() * 3)::int * interval '1 day' else null end,
+              notified_at = case when $4 then now() - (random() * 1)::int * interval '1 day' else null end
+        where order_id = $1 and sku = $2`,
+      [orderId, sku, stage, notified],
+    );
+  };
+
+  // כמו ב-seedCommerce: כל תוצאה של שער האישור מיוצגת פעם אחת, ואחת
+  // מהן חייבת להיות נקייה — אחרת המסך לומד "חוסם", לא "מבחין".
+  const withDebt = customers.slice(0, PROFILE_ORDER.length);
+  const clean = customers.slice(PROFILE_ORDER.length);
+  const [d0, d1] = withDebt;
+  const [k0, k1, k2, k3] = clean;
+
+  // ממתינות להחלטה.
+  if (k0) await place(k0, ['FBR-COT100', 'FBR-LINEN'], { status: 'pending', daysAgo: 0, placedBy: 'המשרד' });
+  if (d0) await place(d0, ['FBR-VELVET', 'FBR-SATIN'], { status: 'pending', daysAgo: 1, placedBy: 'המשרד' });
+
+  // אושרו — אלה שמאכלסות את לוח הייצור, בכל שלב שיש לו.
+  if (k1) {
+    const id = await place(k1, ['FBR-POLY', 'FBR-TRICOT'], { status: 'approved', daysAgo: 3, placedBy: 'המשרד' });
+    await advance(id, 'FBR-POLY', 'started', false);
+    await advance(id, 'FBR-TRICOT', 'near_completion', false);
+  }
+  if (k2) {
+    const id = await place(k2, ['FBR-DENIM'], { status: 'approved', daysAgo: 5, placedBy: 'המשרד' });
+    await advance(id, 'FBR-DENIM', 'ready', false); // מוכן, טרם נשלחה התראה — ממלא את "מוכן ליידוע".
+  }
+  if (k3) {
+    const id = await place(k3, ['FBR-CANVAS', 'FBR-FELT'], { status: 'approved', daysAgo: 8, placedBy: 'המשרד' });
+    await advance(id, 'FBR-CANVAS', 'ready', true);
+    await advance(id, 'FBR-FELT', 'near_completion', false);
+  }
+  if (d1) {
+    const id = await place(d1, ['FBR-COT-PRT'], { status: 'approved', daysAgo: 10, placedBy: 'המשרד' });
+    await advance(id, 'FBR-COT-PRT', 'started', false);
+  }
+
+  // היסטוריה — הזמנות ישנות שנשלחו, כדי שכרטיס הלקוח לא יראה רק "פתוח".
+  for (const customer of customers) {
+    for (let i = 0; i < between(1, 3); i++) {
+      const skus = [...FABRIC_CATALOG].sort(() => random() - 0.5).slice(0, between(1, 3)).map((p) => p.sku);
+      await place(customer, skus, { status: 'shipped', daysAgo: between(20, 240), channel: random() < 0.5 ? 'phone' : 'email' });
+    }
+  }
+
+  return { products: FABRIC_CATALOG.length, orders };
+}
+
 // ═══════════════════════════════════════════════════════ פורטל
 
 export async function seedPortalUsers(

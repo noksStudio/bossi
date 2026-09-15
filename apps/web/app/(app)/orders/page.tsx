@@ -1,11 +1,14 @@
 import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
 import {
-  approveOrder, asPrincipal, customerBalances, listOrders, publishEvent, rejectOrder,
+  approveOrder, asPrincipal, customerBalances, listOrders, listReadyToNotify,
+  markProductionNotified, publishEvent, rejectOrder,
 } from '@bossi/db';
 import { GATE_LABELS, can, formatILS, orderGate, toAgorot } from '@bossi/core';
 import { requirePrincipal } from '@/lib/session';
 import { StatTile, StatusPill } from '@/components/site/chrome';
+import { waLink } from '@/lib/whatsapp';
+import { WhatsAppReadyButton } from '@/components/app/whatsapp-ready-button';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'הזמנות' };
@@ -19,11 +22,13 @@ export const metadata = { title: 'הזמנות' };
  */
 export default async function OrdersPage() {
   const principal = await requirePrincipal();
-  const canApprove = can(principal.role, 'orders.approve');
+  const canApprove = can(principal.role, 'orders.approve', principal.overrides);
+  const canWrite = can(principal.role, 'orders.write', principal.overrides);
 
-  const [orders, balances] = await Promise.all([
+  const [orders, balances, readyToNotify] = await Promise.all([
     asPrincipal(principal, (tx) => listOrders(tx, { limit: 60 })),
     asPrincipal(principal, (tx) => customerBalances(tx)),
+    asPrincipal(principal, (tx) => listReadyToNotify(tx)),
   ]);
 
   const balanceOf = new Map(balances.map((b) => [b.customer_id, b]));
@@ -49,7 +54,7 @@ export default async function OrdersPage() {
   async function approve(orderId: string) {
     'use server';
     const principal = await requirePrincipal();
-    if (!can(principal.role, 'orders.approve')) throw new Error('אין הרשאה לאשר הזמנות');
+    if (!can(principal.role, 'orders.approve', principal.overrides)) throw new Error('אין הרשאה לאשר הזמנות');
     await asPrincipal(principal, async (tx) => {
       // האישור וההקצאה קורים באותה טרנזקציה — אחרת אותו פריט מובטח פעמיים.
       if (await approveOrder(tx, orderId)) {
@@ -62,10 +67,17 @@ export default async function OrdersPage() {
     revalidatePath('/orders');
   }
 
+  async function notify(lineId: string) {
+    'use server';
+    const principal = await requirePrincipal();
+    await asPrincipal(principal, (tx) => markProductionNotified(tx, lineId));
+    revalidatePath('/orders');
+  }
+
   async function reject(orderId: string, formData: FormData) {
     'use server';
     const principal = await requirePrincipal();
-    if (!can(principal.role, 'orders.approve')) throw new Error('אין הרשאה לדחות הזמנות');
+    if (!can(principal.role, 'orders.approve', principal.overrides)) throw new Error('אין הרשאה לדחות הזמנות');
     const reason = String(formData.get('reason') ?? 'נדחה ידנית');
     await asPrincipal(principal, async (tx) => {
       if (await rejectOrder(tx, orderId, reason)) {
@@ -80,14 +92,50 @@ export default async function OrdersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[1.6rem]">הזמנות</h1>
-        <p className="mt-1 text-[0.88rem] text-muted">
-          {pending.length === 0
-            ? 'אין הזמנות שממתינות להחלטה.'
-            : `${pending.length} ממתינות · ${blocked.length} נעצרו בשער האישור`}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-[1.6rem]">הזמנות</h1>
+          <p className="mt-1 text-[0.88rem] text-muted">
+            {pending.length === 0
+              ? 'אין הזמנות שממתינות להחלטה.'
+              : `${pending.length} ממתינות · ${blocked.length} נעצרו בשער האישור`}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/orders/production" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">לוח ייצור</Link>
+          {canWrite ? (
+            <Link href="/orders/new" className="rounded-md px-4 py-2 text-[0.88rem] font-medium text-white" style={{ background: 'var(--accent)' }}>
+              הזמנה חדשה
+            </Link>
+          ) : null}
+        </div>
       </div>
+
+      {readyToNotify.length > 0 ? (
+        <section className="overflow-hidden rounded-lg border" style={{ borderColor: 'var(--positive)', background: 'var(--positive-quiet)' }}>
+          <header className="border-b px-4 py-2.5" style={{ borderColor: 'var(--positive)' }}>
+            <h2 className="text-[0.9rem]" style={{ color: 'var(--positive)' }}>
+              מוכן ליידוע <span className="tnum text-[0.76rem]">({readyToNotify.length})</span>
+            </h2>
+          </header>
+          <ul className="divide-y divide-hairline">
+            {readyToNotify.map((l) => {
+              const wa = l.customer_phone ? waLink(l.customer_phone, `שלום, ההזמנה שלך ${l.order_number} (${l.name}) מוכנה!`) : null;
+              return (
+                <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 text-[0.85rem]">
+                  <div className="min-w-0">
+                    <Link href={`/customers/${l.customer_id}`} className="font-medium hover:underline">{l.customer_name}</Link>
+                    <span className="text-muted"> · {l.name} · {l.order_number}</span>
+                  </div>
+                  {wa ? <WhatsAppReadyButton href={wa} lineId={l.id} markNotified={notify} /> : (
+                    <span className="text-[0.76rem] text-muted">אין מספר טלפון ללקוח</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       <div className="grid grid-cols-2 divide-x divide-x-reverse divide-hairline rounded-lg border border-hairline lg:grid-cols-4">
         <StatTile label="ממתינות" value={String(pending.length)} />

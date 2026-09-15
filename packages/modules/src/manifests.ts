@@ -298,19 +298,28 @@ export const orders: ModuleManifest = {
     defineEvent('orders.rejected', 'ההזמנה נדחתה'),
     defineEvent('orders.shipped', 'ההזמנה נשלחה'),
     defineEvent('orders.reorder_due', 'הגיע הזמן להזמנה חוזרת לפי דפוס הלקוח'),
+    defineEvent('orders.line_ready', 'שורת הזמנה הגיעה לשלב מוכן'),
   ],
   handlers: [
     // הקצאת מלאי קורית רק אם מודול המלאי פעיל — אחרת ההזמנה פשוט נרשמת.
     { id: 'orders.allocate_stock', on: ['orders.placed'], requires: ['inventory'], handle: async () => {} },
     { id: 'orders.release_stock', on: ['orders.rejected'], requires: ['inventory'], handle: async () => {} },
   ],
-  nav: [{ id: 'orders', label: 'הזמנות', href: '/orders', order: 60, realm: 'staff', icon: 'ShoppingCart' }],
+  nav: [
+    { id: 'orders', label: 'הזמנות', href: '/orders', order: 60, realm: 'staff', icon: 'ShoppingCart' },
+    // מסך נפרד, לא טאב בתוך /orders: עובד ייצור עם הרשאת `orders.production`
+    // בלבד (בלי `orders.read`) עדיין צריך למצוא את הלוח מהניווט.
+    { id: 'orders.production_dashboard', label: 'לוח ייצור', href: '/orders/production', order: 58, realm: 'staff', icon: 'Factory' },
+  ],
   slots: [
     { slot: 'customer.tabs', id: 'orders.tab', label: 'הזמנות', order: 35 },
     { slot: 'dashboard.widgets', id: 'orders.reorder_due', label: 'הזמנות חוזרות', order: 25 },
   ],
   jobs: [{ id: 'orders.reorder_scan', schedule: '0 8 * * 0-4', description: 'זיהוי דפוסי הזמנה חוזרת' }],
-  permissions: ['orders.read', 'orders.write', 'orders.approve'],
+  // `orders.production` נפרד מ-`orders.read/write/approve` בכוונה: זו
+  // ההרשאה היחידה שעובד ייצור מקבל, כחריג פר-משתמש (`user_permissions`)
+  // מעל תפקיד `staff` — לא תפקיד חדש. ראה ADR-028.
+  permissions: ['orders.read', 'orders.write', 'orders.approve', 'orders.production'],
   settings: z.object({
     blockOnOverdue: z.boolean().default(true),
     blockOnCreditLimit: z.boolean().default(true),

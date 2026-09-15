@@ -21,5 +21,6 @@ export * from './events';
 export * from './repositories';
 export * from './seed';
 export * from './shares';
+export * from './user-permissions';
 export { resetDemo, seedDemo } from './demo/seed';
 export { seedRealEstate } from './demo/realestate';

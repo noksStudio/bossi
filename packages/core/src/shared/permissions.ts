@@ -31,6 +31,7 @@ const ROLE_GRANTS: Record<Role, string[]> = {
     'signing.send',
     'billing.read', 'collections.read', 'collections.send',
     'alerts.read',
+    'catalog.read', 'orders.read', 'orders.write', 'orders.approve',
   ],
 
   staff: [

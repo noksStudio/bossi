@@ -200,12 +200,30 @@ export async function setStock(
   );
 }
 
+/**
+ * מספר הזמנה עוקב, לתצוגה של "הזמנה חדשה" ידנית. תור/סנכרון שיוצר
+ * הזמנה מספק מספר משלו (למשל seed) — זה רק לזרימה שבה בן אדם ממתין
+ * לתשובה מסך, ולא כדאי להטריח אותו עם מספור ידני.
+ */
+export async function nextOrderNumber(tx: Tx): Promise<string> {
+  const { rows } = await tx.query<{ n: string | null }>(
+    `select max((regexp_match(number, '(\\d+)$'))[1]::int)::text as n from orders`,
+  );
+  const next = (rows[0]?.n ? Number(rows[0].n) : 4199) + 1;
+  return `הז-${next}`;
+}
+
 export async function createOrder(
   tx: Tx,
   input: {
     customerId: string; number: string; channel?: string; status?: string;
     placedAt?: Date; placedBy?: string | null; neededBy?: string | null; holdReason?: string | null;
-    lines: Array<{ productId: string; sku: string; name: string; quantity: string; unitPrice: string }>;
+    lines: Array<{
+      /** לא כל שורה מצביעה על מוצר קטלוג — עבודה מותאמת מקבלת שם חופשי. */
+      productId?: string | null; sku: string; name: string; quantity: string; unitPrice: string;
+      /** סיווג שהמשרד קובע בזמן ההזמנה — צבע ו/או סוג עבודה (0023). */
+      color?: string | null; jobType?: string | null;
+    }>;
   },
 ): Promise<string> {
   const { rows } = await tx.query<{ id: string }>(
@@ -220,12 +238,100 @@ export async function createOrder(
 
   for (const l of input.lines) {
     await tx.query(
-      `insert into order_lines (tenant_id, order_id, product_id, sku, name, quantity, unit_price, line_total)
-       values (current_tenant(), $1, $2, $3, $4, $5, $6, round($5::numeric * $6::numeric, 2))`,
-      [orderId, l.productId, l.sku, l.name, l.quantity, l.unitPrice],
+      `insert into order_lines (tenant_id, order_id, product_id, sku, name, quantity, unit_price, line_total, color, job_type)
+       values (current_tenant(), $1, $2, $3, $4, $5, $6, round($5::numeric * $6::numeric, 2), $7, $8)`,
+      [orderId, l.productId ?? null, l.sku, l.name, l.quantity, l.unitPrice, l.color ?? null, l.jobType ?? null],
     );
   }
   return orderId;
+}
+
+// ── לוח ייצור ─────────────────────────────────────────────────────────────
+//
+// שלב הייצור הוא תכונה של שורת ההזמנה, לא ישות נפרדת (0023) — עסק
+// ייצור עוקב אחרי "מה שלב העבודה על הפריט הזה", לא אחרי הזמנה שלמה
+// כמקשה אחת. רק שורות מהזמנות שאושרו נכנסות ללוח — עבודה לא מתחילה
+// לפני שההזמנה עברה את שער האישור (אשראי, חוב באיחור).
+
+export interface ProductionLineRow {
+  id: string;
+  order_id: string;
+  order_number: string;
+  customer_id: string;
+  customer_name: string;
+  customer_phone: string | null;
+  sku: string;
+  name: string;
+  quantity: string;
+  color: string | null;
+  job_type: string | null;
+  production_stage: string;
+  ready_at: Date | null;
+  notified_at: Date | null;
+  needed_by: Date | null;
+}
+
+const PRODUCTION_SELECT = `
+  select l.id, l.order_id, o.number as order_number, o.customer_id, c.display_name as customer_name,
+         (select ct.phone from contacts ct where ct.customer_id = c.id and ct.phone is not null
+            order by ct.is_primary desc limit 1) as customer_phone,
+         l.sku, l.name, l.quantity::text, l.color, l.job_type, l.production_stage,
+         l.ready_at, l.notified_at, o.needed_by
+    from order_lines l
+    join orders o on o.id = l.order_id
+    join customers c on c.id = o.customer_id
+   where o.status = 'approved'
+`;
+
+export async function listProductionQueue(
+  tx: Tx,
+  f: { stage?: string; color?: string; jobType?: string } = {},
+): Promise<ProductionLineRow[]> {
+  const { rows } = await tx.query<ProductionLineRow>(
+    `${PRODUCTION_SELECT}
+       and ($1::text is null or l.production_stage = $1)
+       and ($2::text is null or l.color = $2)
+       and ($3::text is null or l.job_type = $3)
+      order by
+        case l.production_stage when 'ready' then 0 when 'near_completion' then 1 else 2 end,
+        o.needed_by nulls last, o.placed_at`,
+    [f.stage ?? null, f.color ?? null, f.jobType ?? null],
+  );
+  return rows;
+}
+
+/** שורות שהגיעו ל"מוכן" אבל אף אחד עוד לא לחץ על כפתור היידוע ללקוח. */
+export async function listReadyToNotify(tx: Tx): Promise<ProductionLineRow[]> {
+  const { rows } = await tx.query<ProductionLineRow>(
+    `${PRODUCTION_SELECT} and l.production_stage = 'ready' and l.notified_at is null
+      order by l.ready_at`,
+  );
+  return rows;
+}
+
+const PRODUCTION_STAGES = ['started', 'near_completion', 'ready'] as const;
+export type ProductionStage = typeof PRODUCTION_STAGES[number];
+
+export async function advanceProductionStage(
+  tx: Tx, lineId: string, stage: ProductionStage,
+): Promise<{ orderId: string } | null> {
+  if (!PRODUCTION_STAGES.includes(stage)) throw new Error(`שלב ייצור לא נתמך: ${stage}`);
+  const { rows } = await tx.query<{ order_id: string }>(
+    `update order_lines
+        set production_stage = $2, ready_at = case when $2 = 'ready' then now() else ready_at end
+      where id = $1
+      returning order_id`,
+    [lineId, stage],
+  );
+  return rows[0] ? { orderId: rows[0].order_id } : null;
+}
+
+export async function markProductionNotified(tx: Tx, lineId: string): Promise<boolean> {
+  const { rowCount } = await tx.query(
+    `update order_lines set notified_at = now() where id = $1 and production_stage = 'ready'`,
+    [lineId],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 /**
