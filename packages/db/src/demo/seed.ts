@@ -96,6 +96,19 @@ async function seedTenant(
   const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(random() * xs.length)]!;
   const between = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
 
+  // idempotent: `seedDemo()` יכול לרוץ שוב בייצור אחרי שדייר דמו נוסף
+  // (למשל דייר חדש) בלי לגעת באלה שכבר קיימים — insert-if-missing,
+  // באותו עיקרון בדיוק כמו `feature_packages` (ADR-011). בלי זה, כל
+  // הרצה חוזרת הייתה נכשלת על התנגשות `slug` ומפילה את כל הזריעה,
+  // כולל הדיירים שעדיין לא נוצרו.
+  const already = await withPlatform((tx) =>
+    tx.query<{ id: string }>('select id from tenants where slug = $1', [opts.slug]),
+  );
+  if (already.rows[0]) {
+    log(`  · ${opts.name}: כבר קיים (${opts.slug}) — מדלג.`);
+    return { tenantId: already.rows[0].id, customers: 0, documents: 0, events: 0 };
+  }
+
   const tenantId = await createTenant({
     slug: opts.slug,
     name: opts.name,

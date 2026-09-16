@@ -47,6 +47,15 @@ export async function seedRealEstate(log: (m: string) => void = console.log): Pr
   const pick = <T,>(xs: readonly T[]): T => xs[Math.floor(random() * xs.length)]!;
   const between = (lo: number, hi: number) => lo + Math.floor(random() * (hi - lo + 1));
 
+  // idempotent — אותו נימוק בדיוק כמו ב-`seedTenant` הכללי ב-demo/seed.ts.
+  const already = await withPlatform((tx) =>
+    tx.query<{ id: string }>("select id from tenants where slug = 'demo-masika'"),
+  );
+  if (already.rows[0]) {
+    log('  · ר. מסיקה — נכסים והשקעות: כבר קיים (demo-masika) — מדלג.');
+    return already.rows[0].id;
+  }
+
   const tenantId = await createTenant({
     slug: 'demo-masika',
     name: 'ר. מסיקה — נכסים והשקעות',
