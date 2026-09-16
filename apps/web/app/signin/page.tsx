@@ -11,6 +11,7 @@ export const metadata = { title: 'כניסה' };
 const DEMO_LABELS: Record<string, string> = {
   'demo-lavi': 'דמו — משרד עורכי דין',
   'demo-tavor': 'דמו — יבואן B2B',
+  'demo-dbplast': 'דמו — יצרן בדים',
   'demo-masika': 'דמו — נדל״ן להשכרה',
 };
 

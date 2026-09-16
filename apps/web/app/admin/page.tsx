@@ -188,6 +188,17 @@ function TenantTable({
                         {t.name}
                       </Link>
                       <div className="text-[0.7rem] text-muted" dir="ltr">{t.slug}</div>
+                      {t.is_demo ? (
+                        <a
+                          href={`/api/auth/demo?t=${t.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-0.5 inline-block text-[0.72rem] font-medium hover:underline"
+                          style={{ color: 'var(--accent)' }}
+                        >
+                          כניסה לדמו ←
+                        </a>
+                      ) : null}
                     </td>
                     <td className="whitespace-nowrap px-4 py-2.5">
                       {PLANS[t.plan as keyof typeof PLANS]?.name ?? t.plan}
