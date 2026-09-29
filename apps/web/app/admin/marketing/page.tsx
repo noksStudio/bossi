@@ -10,7 +10,7 @@ import { requireAdmin } from '@/lib/platform-session';
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'שיווק · ניהול' };
 
-type Tab = 'organic' | 'paid';
+type Tab = 'organic' | 'paid' | 'cold';
 
 /**
  * שיווק הפלטפורמה — הפעילויות שמביאות לידים ל-Bossi, לא הלידים
@@ -26,7 +26,7 @@ export default async function MarketingPage({
 }) {
   await requireAdmin();
   const { tab: rawTab, q } = await searchParams;
-  const tab: Tab = rawTab === 'paid' ? 'paid' : 'organic';
+  const tab: Tab = rawTab === 'paid' ? 'paid' : rawTab === 'cold' ? 'cold' : 'organic';
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -41,9 +41,10 @@ export default async function MarketingPage({
       <div className="flex gap-1.5 border-b border-hairline">
         <TabLink tab="organic" active={tab === 'organic'}>אורגני</TabLink>
         <TabLink tab="paid" active={tab === 'paid'}>ממומן</TabLink>
+        <TabLink tab="cold" active={tab === 'cold'}>לידים קרים</TabLink>
       </div>
 
-      {tab === 'organic' ? <OrganicTab /> : <PaidTab q={q} />}
+      {tab === 'organic' ? <OrganicTab /> : tab === 'paid' ? <PaidTab q={q} /> : <ColdLeadsTab />}
     </div>
   );
 }
@@ -297,6 +298,80 @@ async function PaidTab({ q }: { q?: string }) {
             ))}
           </ul>
         )}
+      </section>
+    </div>
+  );
+}
+
+// ── לידים קרים ───────────────────────────────────────────────────────────
+
+type ColdSource = { title: string; url: string; note?: string };
+type ColdGroup = { region: string; sources: ColdSource[] };
+
+/**
+ * מדריכים חיצוניים לאיתור לידים קרים לחיוג — לא מאגר פנימי. הקישורים
+ * מובילים לדפי קטגוריה מסוננים בספריות עסקים ישראליות; אין להם API,
+ * אז האיסוף הוא ידני — פותחים, מעתיקים שם+טלפון לכרטיסייה ב-/admin/leads.
+ */
+const COLD_LEAD_SOURCES: ColdGroup[] = [
+  {
+    region: 'נתניה',
+    sources: [
+      { title: 'יבואנים בנתניה — B144', url: 'https://www.b144.co.il/%D7%99%D7%91%D7%95%D7%90/%D7%A0%D7%AA%D7%A0%D7%99%D7%94/' },
+      { title: 'חברות שיווק והפצה בנתניה — B144', url: 'https://www.b144.co.il/%D7%A9%D7%99%D7%95%D7%95%D7%A7-%D7%95%D7%94%D7%A4%D7%A6%D7%94/%D7%A0%D7%AA%D7%A0%D7%99%D7%94/' },
+      { title: 'סיטונאות מזון בנתניה — B144', url: 'https://www.b144.co.il/%D7%99%D7%91%D7%95%D7%90-%D7%9E%D7%96%D7%95%D7%9F/%D7%A0%D7%AA%D7%A0%D7%99%D7%94/' },
+    ],
+  },
+  {
+    region: 'השרון (אזורי)',
+    sources: [
+      { title: 'יבואנים באזור השרון — Easy', url: 'https://easy.co.il/list/Importers?region=11' },
+      { title: 'יבוא ויצוא חקלאי באזור השרון — B144', url: 'https://www.b144.co.il/%D7%99%D7%A6%D7%95%D7%90-%D7%95%D7%99%D7%91%D7%95%D7%90-%D7%97%D7%A7%D7%9C%D7%90%D7%99/%D7%90%D7%96%D7%95%D7%A8-%D7%94%D7%A9%D7%A8%D7%95%D7%9F/', note: 'רלוונטי לספקים חקלאיים/מזון' },
+    ],
+  },
+];
+
+function ColdLeadsTab() {
+  return (
+    <div className="space-y-6">
+      <section className="rounded-lg border border-hairline p-4">
+        <h2 className="text-[0.98rem]">יעד נוכחי</h2>
+        <p className="mt-1 text-[0.88rem] leading-relaxed text-secondary">
+          יבואנים ומפיצי B2B באזור נתניה-השרון. איסוף ידני — אין API לספריות האלה.
+        </p>
+      </section>
+
+      {COLD_LEAD_SOURCES.map((group) => (
+        <section key={group.region} className="space-y-2.5">
+          <h2 className="text-[0.95rem] text-muted">{group.region}</h2>
+          <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
+            {group.sources.map((s) => (
+              <li key={s.url} className="flex items-center justify-between gap-3 p-3.5">
+                <div className="min-w-0">
+                  <a href={s.url} target="_blank" rel="noreferrer" className="text-[0.9rem] font-medium hover:underline">
+                    {s.title}
+                  </a>
+                  {s.note ? <div className="mt-0.5 text-[0.78rem] text-muted">{s.note}</div> : null}
+                </div>
+                <a
+                  href={s.url} target="_blank" rel="noreferrer"
+                  className="shrink-0 rounded-md border border-strong px-3 py-1.5 text-[0.82rem]"
+                >
+                  פתיחה ←
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+
+      <section className="rounded-lg border border-dashed border-strong p-4">
+        <h2 className="text-[0.9rem]">איך להשתמש</h2>
+        <p className="mt-1.5 text-[0.85rem] leading-relaxed text-secondary">
+          פותחים קישור, עוברים על העסקים ברשימה, ולכל עסק רלוונטי מעתיקים שם + טלפון
+          ישירות לכרטיסיית ליד חדשה ב<Link href="/admin/leads" className="underline">תיקיית הלידים</Link>.
+          לפני חיוג — לוודא את מספר הטלפון מול הדף המקורי; ספריות אלה לפעמים מציגות מידע לא מעודכן.
+        </p>
       </section>
     </div>
   );
