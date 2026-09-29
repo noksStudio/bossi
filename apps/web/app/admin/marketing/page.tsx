@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import {
   createCampaign, createFacebookGroup, createProspect, deleteCampaign, deleteFacebookGroup,
-  listCampaigns, listFacebookGroups,
+  listCampaigns, listFacebookGroups, listProspects,
 } from '@bossi/db';
 import { PlacesSearchError, searchPlaces, type PlaceResult } from '@bossi/integrations';
 import { requireAdmin } from '@/lib/platform-session';
@@ -22,10 +22,10 @@ type Tab = 'organic' | 'paid' | 'cold';
 export default async function MarketingPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; q?: string }>;
+  searchParams: Promise<{ tab?: string; q?: string; qt?: string; qc?: string }>;
 }) {
   await requireAdmin();
-  const { tab: rawTab, q } = await searchParams;
+  const { tab: rawTab, q, qt, qc } = await searchParams;
   const tab: Tab = rawTab === 'paid' ? 'paid' : rawTab === 'cold' ? 'cold' : 'organic';
 
   return (
@@ -44,7 +44,7 @@ export default async function MarketingPage({
         <TabLink tab="cold" active={tab === 'cold'}>לידים קרים</TabLink>
       </div>
 
-      {tab === 'organic' ? <OrganicTab /> : tab === 'paid' ? <PaidTab q={q} /> : <ColdLeadsTab />}
+      {tab === 'organic' ? <OrganicTab /> : tab === 'paid' ? <PaidTab q={q} qt={qt} qc={qc} /> : <ColdLeadsTab />}
     </div>
   );
 }
@@ -59,6 +59,18 @@ function TabLink({ tab, active, children }: { tab: Tab; active: boolean; childre
         color: active ? 'var(--text-primary)' : 'var(--text-muted)',
         fontWeight: active ? 500 : 400,
       }}
+    >
+      {children}
+    </Link>
+  );
+}
+
+function Chip({ href, active, children }: { href: string; active: boolean; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-full border border-strong px-3 py-1.5 text-[0.82rem]"
+      style={active ? { background: 'var(--accent)', borderColor: 'var(--accent)', color: '#fff' } : undefined}
     >
       {children}
     </Link>
@@ -147,17 +159,56 @@ async function OrganicTab() {
 
 // ── ממומן ────────────────────────────────────────────────────────────────
 
-async function PaidTab({ q }: { q?: string }) {
+const SEARCH_TYPES = ['יבואן', 'סיטונאות', 'מפיץ', 'שיווק והפצה', 'יצרן', 'עמיל מכס'];
+const SEARCH_CITIES = [
+  'נתניה', 'הרצליה', 'כפר סבא', 'רעננה', 'הוד השרון', 'פתח תקווה',
+  'ראש העין', 'בני ברק', 'תל אביב', 'חולון', 'ראשון לציון', 'אשדוד',
+];
+
+function paidHref(qt?: string, qc?: string): string {
+  const p = new URLSearchParams({ tab: 'paid' });
+  if (qt) p.set('qt', qt);
+  if (qc) p.set('qc', qc);
+  return `/admin/marketing?${p}`;
+}
+
+/** Places מחזיר ‎+972 9-887-3565, הזנה ידנית היא 09-8873565 — משווים ספרות בלבד. */
+function normalizePhone(phone: string | null): string | null {
+  if (!phone) return null;
+  let digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('972')) digits = `0${digits.slice(3)}`;
+  return digits || null;
+}
+
+async function PaidTab({ q, qt, qc }: { q?: string; qt?: string; qc?: string }) {
   const apiKey = process.env['GOOGLE_PLACES_API_KEY'];
+  const query = q?.trim() || (qt && qc ? `${qt} ב${qc}` : undefined);
   let results: PlaceResult[] = [];
   let searchError: string | null = null;
-  if (q && apiKey) {
+  if (query && apiKey) {
     try {
-      results = await searchPlaces(q, apiKey);
+      results = await searchPlaces(query, apiKey);
     } catch (err) {
       searchError = err instanceof PlacesSearchError ? 'החיפוש נכשל — ייתכן שהמפתח לא תקין או שהמכסה נגמרה.' : 'שגיאה לא צפויה. נסו שוב.';
     }
   }
+
+  // חיפושים חופפים ("יבואן" ו"מפיץ" באותה עיר) מחזירים את אותם עסקים —
+  // מה שכבר בתיקיית הלידים מסומן ולא נבחר כברירת מחדל.
+  const known = new Set<string>();
+  if (results.length > 0) {
+    for (const p of await listProspects()) {
+      const phone = normalizePhone(p.phone);
+      if (phone) known.add(phone);
+      known.add(p.name.trim().toLowerCase());
+    }
+  }
+  const isKnown = (p: PlaceResult) => {
+    const phone = normalizePhone(p.phone);
+    return (phone !== null && known.has(phone)) || known.has(p.name.trim().toLowerCase());
+  };
+  const newCount = results.filter((p) => !isKnown(p)).length;
+  const backHref = q?.trim() ? `/admin/marketing?${new URLSearchParams({ tab: 'paid', q: q.trim() })}` : paidHref(qt, qc);
 
   const campaigns = await listCampaigns();
 
@@ -171,7 +222,10 @@ async function PaidTab({ q }: { q?: string }) {
       if (!place) continue;
       await createProspect({ name: place.name, phone: place.phone, address: place.address, website: place.website, source: 'google_places' });
     }
-    redirect('/admin/leads');
+    // חזרה לאותו חיפוש — העסקים שיובאו מופיעים עכשיו כ"כבר ברשימה",
+    // וממשיכים לצירוף הבא בלי לאבד את המקום.
+    const back = String(formData.get('back') ?? '');
+    redirect(back.startsWith('/admin/marketing?') ? back : '/admin/leads');
   }
 
   async function addCampaignAction(formData: FormData) {
@@ -214,31 +268,60 @@ async function PaidTab({ q }: { q?: string }) {
           </div>
         ) : (
           <>
+            <div className="space-y-3 rounded-lg border border-hairline p-4">
+              <div>
+                <p className="text-[0.8rem] text-muted">סוג עסק</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {SEARCH_TYPES.map((t) => (
+                    <Chip key={t} href={paidHref(t, qc)} active={!q && qt === t}>{t}</Chip>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-[0.8rem] text-muted">עיר</p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {SEARCH_CITIES.map((c) => (
+                    <Chip key={c} href={paidHref(qt, c)} active={!q && qc === c}>{c}</Chip>
+                  ))}
+                </div>
+              </div>
+              {!q && (qt || qc) && !(qt && qc) ? (
+                <p className="text-[0.8rem] text-muted">{qt ? 'בחרו עיר' : 'בחרו סוג עסק'} — החיפוש ירוץ אוטומטית.</p>
+              ) : null}
+            </div>
+
             <form className="flex flex-wrap gap-2.5">
               <input type="hidden" name="tab" value="paid" />
               <input
-                name="q" defaultValue={q ?? ''} placeholder='למשל: "עורכי דין בתל אביב"'
+                name="q" defaultValue={query ?? ''} placeholder='או חיפוש חופשי: "יבואני כלי בית באשדוד"'
                 className="min-w-64 flex-1 rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none"
               />
               <button type="submit" className="rounded-md border border-strong px-4 py-2 text-[0.88rem]">חפש</button>
             </form>
 
             {searchError ? <p className="text-[0.85rem]" style={{ color: 'var(--danger)' }}>{searchError}</p> : null}
-            {q && !searchError && results.length === 0 ? (
+            {query && !searchError && results.length === 0 ? (
               <p className="text-[0.88rem] text-muted">לא נמצאו תוצאות. נסו שאילתה אחרת.</p>
             ) : null}
 
             {results.length > 0 ? (
               <form action={importSelected} className="space-y-3">
                 <input type="hidden" name="resultsJson" value={JSON.stringify(results)} />
-                <p className="text-[0.82rem] text-muted">{results.length} תוצאות · מסומנות כברירת מחדל</p>
+                <input type="hidden" name="back" value={backHref} />
+                <p className="text-[0.82rem] text-muted">
+                  {results.length} תוצאות · {newCount} חדשות מסומנות
+                  {results.length > newCount ? ` · ${results.length - newCount} כבר ברשימה` : ''}
+                </p>
                 <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
                   {results.map((p, i) => (
-                    <li key={p.placeId} className="p-3">
+                    <li key={p.placeId} className="p-3" style={isKnown(p) ? { opacity: 0.55 } : undefined}>
                       <label className="flex items-start gap-3">
-                        <input type="checkbox" name="selected" value={i} defaultChecked className="mt-1" />
+                        <input type="checkbox" name="selected" value={i} defaultChecked={!isKnown(p)} className="mt-1" />
                         <span className="min-w-0 flex-1 text-[0.88rem]">
-                          <span className="block font-medium">{p.name}</span>
+                          <span className="block font-medium">
+                            {p.name}
+                            {isKnown(p) ? <span className="ms-2 text-[0.75rem] font-normal text-muted">כבר ברשימה</span> : null}
+                          </span>
                           {p.address ? <span className="block text-[0.78rem] text-muted">{p.address}</span> : null}
                           {p.phone ? <span className="block text-[0.78rem] text-muted" dir="ltr">{p.phone}</span> : null}
                         </span>
