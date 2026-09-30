@@ -12,6 +12,7 @@ export const metadata = { title: 'ליד · ניהול' };
 
 const SOURCE_LABELS: Record<string, string> = {
   google_places: 'Google Places',
+  landing: 'דף נחיתה',
   referral: 'הפניה',
   facebook_group: 'קבוצת פייסבוק',
   cold_call: 'פנייה יזומה',

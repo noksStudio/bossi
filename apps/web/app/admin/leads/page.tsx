@@ -9,6 +9,7 @@ export const metadata = { title: 'לידים · ניהול' };
 
 const PROSPECT_SOURCE_LABELS: Record<string, string> = {
   google_places: 'Google Places',
+  landing: 'דף נחיתה',
   referral: 'הפניה',
   facebook_group: 'קבוצת פייסבוק',
   cold_call: 'פנייה יזומה',

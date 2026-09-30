@@ -118,4 +118,9 @@ describe('הפרדת ריאלמים ב-middleware', () => {
     expect(await go('/s/some-token')).toBeNull();
     expect(await go('/demo/invoice.pdf')).toBeNull();
   });
+
+  it('דף הנחיתה פתוח בלי עוגייה — אחרת כל קליק מפרסום נוחת על מסך התחברות', async () => {
+    expect(await go('/importers')).toBeNull();
+    expect(await go('/importers?utm_source=facebook')).toBeNull();
+  });
 });

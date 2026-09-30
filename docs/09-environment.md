@@ -144,6 +144,7 @@ Intelligence.
 | `BOSSI_DEFAULT_PLAN` | חבילת ברירת מחדל לדייר חדש |
 | `BOSSI_SEED_DEMO` | נתוני דמו. **`false` בייצור, תמיד** |
 | `GOOGLE_PLACES_API_KEY` | חיפוש וייבוא לידים מ-Google Places (`/leads/import`). דורש Google Cloud עם חיוב פעיל — לא מסופק על ידינו |
+| `LANDING_VIDEO_URL` | הסרטון בדף הנחיתה `/importers` — YouTube או mp4/webm ב-https. בלעדיו הדף מוצג בלי סרטון |
 
 ---
 

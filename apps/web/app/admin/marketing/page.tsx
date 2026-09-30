@@ -5,6 +5,7 @@ import {
   listCampaigns, listFacebookGroups, listProspects,
 } from '@bossi/db';
 import { PlacesSearchError, searchPlaces, type PlaceResult } from '@bossi/integrations';
+import { normalizePhone } from '@/lib/phone';
 import { requireAdmin } from '@/lib/platform-session';
 
 export const dynamic = 'force-dynamic';
@@ -170,14 +171,6 @@ function paidHref(qt?: string, qc?: string): string {
   if (qt) p.set('qt', qt);
   if (qc) p.set('qc', qc);
   return `/admin/marketing?${p}`;
-}
-
-/** Places מחזיר ‎+972 9-887-3565, הזנה ידנית היא 09-8873565 — משווים ספרות בלבד. */
-function normalizePhone(phone: string | null): string | null {
-  if (!phone) return null;
-  let digits = phone.replace(/\D/g, '');
-  if (digits.startsWith('972')) digits = `0${digits.slice(3)}`;
-  return digits || null;
 }
 
 async function PaidTab({ q, qt, qc }: { q?: string; qt?: string; qc?: string }) {
