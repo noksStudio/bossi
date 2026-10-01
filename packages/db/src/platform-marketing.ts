@@ -180,18 +180,38 @@ export async function createProspect(input: {
   note?: string | null;
   nationalId?: string | null;
   companyNumber?: string | null;
-}): Promise<string> {
-  const { rows } = await withPlatform((tx) =>
-    tx.query<{ id: string }>(
+}): Promise<{ id: string; created: boolean }> {
+  // מספר שכבר קיים (אחרי נרמול, 0024) לא יוצר ליד שני — מחזיר את הקיים.
+  // `created: false` נותן ל-caller להחליט: הודעה, דילוג, או הערה על הקיים.
+  return withPlatform(async (tx) => {
+    const inserted = await tx.query<{ id: string }>(
       `insert into platform_prospects (name, phone, address, website, source, note, national_id, company_number)
-       values ($1, $2, $3, $4, coalesce($5, 'google_places'), $6, $7, $8) returning id`,
+       values ($1, $2, $3, $4, coalesce($5, 'google_places'), $6, $7, $8)
+       on conflict (phone_key) where phone_key is not null do nothing
+       returning id`,
       [
         input.name, input.phone ?? null, input.address ?? null, input.website ?? null, input.source ?? null,
         input.note ?? null, input.nationalId ?? null, input.companyNumber ?? null,
       ],
+    );
+    if (inserted.rows[0]) return { id: inserted.rows[0].id, created: true };
+    const { rows } = await tx.query<{ id: string }>(
+      'select id from platform_prospects where phone_key = platform_phone_key($1)',
+      [input.phone ?? null],
+    );
+    return { id: rows[0]!.id, created: false };
+  });
+}
+
+/** הליד שמחזיק את המספר הזה, אם יש — להודעה "כבר קיים" עם קישור אליו. */
+export async function findProspectByPhone(phone: string): Promise<ProspectRow | null> {
+  const { rows } = await withPlatform((tx) =>
+    tx.query<ProspectRow>(
+      `select ${PROSPECT_COLUMNS} from platform_prospects where phone_key = platform_phone_key($1)`,
+      [phone],
     ),
   );
-  return rows[0]!.id;
+  return rows[0] ?? null;
 }
 
 /** ת"ז/ח"פ מתווספים לרוב אחרי היצירה — כשעסקה מתקדמת ולא בשלב הליד הראשוני. */
@@ -216,12 +236,20 @@ export async function setProspectIdentifiers(
 const EDITABLE_PROSPECT_FIELDS = ['phone', 'address', 'website', 'note', 'national_id', 'company_number'] as const;
 export type EditableProspectField = typeof EDITABLE_PROSPECT_FIELDS[number];
 
-export async function updateProspectField(id: string, field: EditableProspectField, value: string | null): Promise<boolean> {
+export async function updateProspectField(
+  id: string, field: EditableProspectField, value: string | null,
+): Promise<'ok' | 'not_found' | 'duplicate_phone'> {
   if (!EDITABLE_PROSPECT_FIELDS.includes(field)) throw new Error(`שדה לא נתמך לעריכה: ${field}`);
-  const { rowCount } = await withPlatform((tx) =>
-    tx.query(`update platform_prospects set ${field} = $2 where id = $1`, [id, value || null]),
-  );
-  return (rowCount ?? 0) > 0;
+  try {
+    const { rowCount } = await withPlatform((tx) =>
+      tx.query(`update platform_prospects set ${field} = $2 where id = $1`, [id, value || null]),
+    );
+    return (rowCount ?? 0) > 0 ? 'ok' : 'not_found';
+  } catch (err) {
+    // שינוי טלפון למספר של ליד אחר — האינדקס הייחודי (0024) עוצר, וזו לא תקלה.
+    if ((err as { code?: string }).code === '23505' && field === 'phone') return 'duplicate_phone';
+    throw err;
+  }
 }
 
 export async function setProspectContacted(id: string, contacted: boolean): Promise<boolean> {

@@ -84,17 +84,28 @@ function AutoSaveField({
 }) {
   const [draft, setDraft] = useState(value);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const lastSaved = useRef(value);
   useEffect(() => { setDraft(value); lastSaved.current = value; }, [value]);
 
   async function save() {
     if (draft === lastSaved.current) return;
+    const previous = lastSaved.current;
     lastSaved.current = draft;
-    await fetch(`/api/admin/leads/${id}`, {
+    const res = await fetch(`/api/admin/leads/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ field, value: draft }),
     });
+    if (!res.ok) {
+      // הערך לא נשמר (למשל טלפון של ליד אחר) — חוזרים לערך השמור ולא משאירים מצג שווא.
+      const body = await res.json().catch(() => ({}));
+      lastSaved.current = previous;
+      setDraft(previous);
+      setError(typeof body?.message === 'string' ? body.message : 'השמירה נכשלה');
+      return;
+    }
+    setError(null);
     onSaved?.(draft);
     setSaved(true);
     setTimeout(() => setSaved(false), 1400);
@@ -116,6 +127,7 @@ function AutoSaveField({
         onKeyDown={(e) => { if (!multiline && e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
         className="mt-0.5 w-full rounded-md border border-strong bg-raised px-2.5 py-1.5 text-[0.86rem] outline-none focus:border-accent"
       />
+      {error ? <span className="mt-1 block text-[0.72rem]" style={{ color: 'var(--danger)' }}>{error}</span> : null}
     </label>
   );
 }

@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createProspect } from '@bossi/db';
+import { addProspectNote, createProspect } from '@bossi/db';
 import { BossiWordmark } from '@/components/brand/logo';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { isIsraeliPhone, normalizePhone } from '@/lib/phone';
@@ -110,7 +110,9 @@ export default async function ImportersLandingPage({
       campaign ? `קמפיין: ${campaign}` : null,
     ].filter(Boolean).join(' · ');
 
-    await createProspect({ name: business || contact, phone, source: 'landing', note });
+    const { id, created } = await createProspect({ name: business || contact, phone, source: 'landing', note });
+    // מי שחוזר ומשאיר פרטים שוב הוא ליד חם — לא כפיל, אלא אות שנרשם על הליד הקיים.
+    if (!created) await addProspectNote(id, `השאיר שוב פרטים בדף הנחיתה · ${note}`);
     redirect('/importers?sent=1#form');
   }
 

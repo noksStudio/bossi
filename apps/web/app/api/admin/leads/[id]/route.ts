@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import {
-  deleteProspect, getProspect, listProspectNotes, setProspectBooked, setProspectContacted,
+  deleteProspect, findProspectByPhone, getProspect, listProspectNotes, setProspectBooked, setProspectContacted,
   setProspectFollowUp, updateProspectField, type EditableProspectField,
 } from '@bossi/db';
 import { currentAdmin } from '@/lib/platform-session';
@@ -47,8 +47,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (!ok) return NextResponse.json({ error: 'not_found' }, { status: 404 });
   } else if (TEXT_FIELDS.has(field)) {
     const value = typeof body.value === 'string' ? body.value.trim() || null : null;
-    const ok = await updateProspectField(id, field, value);
-    if (!ok) return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    const result = await updateProspectField(id, field, value);
+    if (result === 'not_found') return NextResponse.json({ error: 'not_found' }, { status: 404 });
+    if (result === 'duplicate_phone') {
+      const owner = value ? await findProspectByPhone(value) : null;
+      return NextResponse.json(
+        { error: 'duplicate_phone', message: `המספר כבר שייך לליד "${owner?.name ?? 'אחר'}"`, existingId: owner?.id ?? null },
+        { status: 409 },
+      );
+    }
   } else {
     return NextResponse.json({ error: 'unknown_field' }, { status: 400 });
   }

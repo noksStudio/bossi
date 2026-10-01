@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { createProspect, listProspects, searchProspects } from '@bossi/db';
+import { createProspect, getProspect, listProspects, searchProspects } from '@bossi/db';
 import { parseLeadList } from '@/lib/lead-list';
-import { normalizePhone } from '@/lib/phone';
 import { requireAdmin } from '@/lib/platform-session';
 import { LeadList } from '@/components/admin/lead-quick-view';
 
@@ -26,10 +25,11 @@ const PROSPECT_SOURCE_LABELS: Record<string, string> = {
 export default async function LeadsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; imported?: string; skipped?: string }>;
+  searchParams: Promise<{ q?: string; imported?: string; skipped?: string; dup?: string }>;
 }) {
   await requireAdmin();
-  const { q, imported, skipped } = await searchParams;
+  const { q, imported, skipped, dup } = await searchParams;
+  const duplicateOf = dup && /^[0-9a-f-]{36}$/.test(dup) ? await getProspect(dup) : null;
   const trimmed = q?.trim();
   const prospects = trimmed ? await searchProspects(trimmed) : await listProspects();
 
@@ -38,7 +38,7 @@ export default async function LeadsPage({
     await requireAdmin();
     const name = String(formData.get('name') ?? '').trim();
     if (!name) return;
-    await createProspect({
+    const { id, created } = await createProspect({
       name,
       phone: String(formData.get('phone') ?? '').trim() || null,
       source: String(formData.get('source') ?? 'other'),
@@ -46,29 +46,20 @@ export default async function LeadsPage({
       nationalId: String(formData.get('nationalId') ?? '').trim() || null,
       companyNumber: String(formData.get('companyNumber') ?? '').trim() || null,
     });
-    redirect('/admin/leads');
+    redirect(created ? '/admin/leads' : `/admin/leads?dup=${id}`);
   }
 
   async function importList(formData: FormData) {
     'use server';
     await requireAdmin();
     const rows = parseLeadList(String(formData.get('list') ?? ''));
-    const seen = new Set<string>();
-    for (const p of await listProspects()) {
-      const phone = normalizePhone(p.phone);
-      if (phone) seen.add(phone);
-    }
     let added = 0;
     let dup = 0;
+    // הכפילויות נעצרות במסד (0024) — גם מול לידים קיימים וגם בתוך הרשימה עצמה.
     for (const row of rows) {
-      const key = normalizePhone(row.phone)!;
-      if (seen.has(key)) {
-        dup += 1;
-        continue;
-      }
-      seen.add(key);
-      await createProspect({ name: row.name, phone: row.phone, address: row.address, note: row.note, source: 'cold_call' });
-      added += 1;
+      const { created } = await createProspect({ name: row.name, phone: row.phone, address: row.address, note: row.note, source: 'cold_call' });
+      if (created) added += 1;
+      else dup += 1;
     }
     redirect(`/admin/leads?imported=${added}&skipped=${dup}`);
   }
@@ -107,6 +98,13 @@ export default async function LeadsPage({
           הוספת ליד ידנית
         </button>
       </form>
+
+      {duplicateOf ? (
+        <p className="rounded-md border px-4 py-3 text-[0.88rem]" style={{ borderColor: 'var(--warning)', background: 'var(--warning-quiet)' }}>
+          כבר קיים ליד עם המספר הזה, ולא נוצר כפיל:{' '}
+          <Link href={`/admin/leads/${duplicateOf.id}`} className="font-medium underline">{duplicateOf.name}</Link>
+        </p>
+      ) : null}
 
       {imported !== undefined ? (
         <p className="rounded-md border border-hairline bg-raised px-4 py-3 text-[0.88rem]">
