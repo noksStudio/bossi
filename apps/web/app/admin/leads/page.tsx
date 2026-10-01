@@ -2,6 +2,8 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createProspect, getProspect, listProspects, searchProspects } from '@bossi/db';
 import { parseLeadList } from '@/lib/lead-list';
+import { LEAD_BATCHES, batchLeads } from '@/lib/lead-batches';
+import { normalizePhone } from '@/lib/phone';
 import { requireAdmin } from '@/lib/platform-session';
 import { LeadList } from '@/components/admin/lead-quick-view';
 
@@ -64,6 +66,31 @@ export default async function LeadsPage({
     redirect(`/admin/leads?imported=${added}&skipped=${dup}`);
   }
 
+  async function importBatch(formData: FormData) {
+    'use server';
+    await requireAdmin();
+    const batch = LEAD_BATCHES.find((b) => b.id === formData.get('batch'));
+    if (!batch) return;
+    let added = 0;
+    let dup = 0;
+    for (const row of batchLeads(batch)) {
+      const { created } = await createProspect({ name: row.name, phone: row.phone, address: row.address, note: row.note, source: 'cold_call' });
+      if (created) added += 1;
+      else dup += 1;
+    }
+    redirect(`/admin/leads?imported=${added}&skipped=${dup}`);
+  }
+
+  // כמה מכל סבב כבר במערכת — לפי אותו מפתח טלפון שהמסד אוכף (0024).
+  const knownPhones = new Set(
+    (trimmed ? await listProspects() : prospects).map((p) => (p.phone ? normalizePhone(p.phone) : '')),
+  );
+  const batches = LEAD_BATCHES.map((b) => {
+    const leads = batchLeads(b);
+    const fresh = leads.filter((l) => !knownPhones.has(normalizePhone(l.phone))).length;
+    return { ...b, total: leads.length, fresh };
+  });
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -83,6 +110,46 @@ export default async function LeadsPage({
         {trimmed ? <Link href="/admin/leads" className="rounded-md px-4 py-2 text-[0.88rem] text-muted hover:underline">איפוס</Link> : null}
       </form>
 
+      {duplicateOf ? (
+        <p className="rounded-md border px-4 py-3 text-[0.88rem]" style={{ borderColor: 'var(--warning)', background: 'var(--warning-quiet)' }}>
+          כבר קיים ליד עם המספר הזה, ולא נוצר כפיל:{' '}
+          <Link href={`/admin/leads/${duplicateOf.id}`} className="font-medium underline">{duplicateOf.name}</Link>
+        </p>
+      ) : null}
+
+      {imported !== undefined ? (
+        <p className="rounded-md border border-hairline bg-raised px-4 py-3 text-[0.88rem]">
+          נוספו {imported} לידים{Number(skipped) > 0 ? ` · ${skipped} כבר היו ברשימה ודולגו` : ''}.
+        </p>
+      ) : null}
+
+      <section className="rounded-lg border border-hairline p-4">
+        <h2 className="text-[0.92rem] font-medium">סבבי לידים מוכנים לחיוג</h2>
+        <p className="mt-1 text-[0.8rem] leading-relaxed text-muted">
+          יבואנים, מפיצים ויצרנים מנתניה והשרון, שנאספו ממדריכי עסקים. מספר שכבר קיים ברשימה מדולג.
+        </p>
+        <ul className="mt-3 divide-y divide-hairline">
+          {batches.map((b) => (
+            <li key={b.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="text-[0.9rem] font-medium">{b.title}</div>
+                <div className="text-[0.76rem] text-muted">{b.areas}</div>
+              </div>
+              {b.fresh === 0 ? (
+                <span className="text-[0.82rem]" style={{ color: 'var(--positive)' }}>✓ כל {b.total} ברשימה</span>
+              ) : (
+                <form action={importBatch}>
+                  <input type="hidden" name="batch" value={b.id} />
+                  <button type="submit" className="rounded-md px-4 py-2 text-[0.85rem] font-medium text-white" style={{ background: 'var(--accent)' }}>
+                    {b.fresh === b.total ? `ייבוא ${b.total} לידים` : `ייבוא ${b.fresh} חדשים מתוך ${b.total}`}
+                  </button>
+                </form>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <form action={addProspectManually} className="grid gap-2.5 rounded-lg border border-hairline p-4 sm:grid-cols-2">
         <input name="name" placeholder="שם העסק / איש קשר" required className="rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none" />
         <input name="phone" placeholder="טלפון" dir="ltr" className="rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none" />
@@ -98,19 +165,6 @@ export default async function LeadsPage({
           הוספת ליד ידנית
         </button>
       </form>
-
-      {duplicateOf ? (
-        <p className="rounded-md border px-4 py-3 text-[0.88rem]" style={{ borderColor: 'var(--warning)', background: 'var(--warning-quiet)' }}>
-          כבר קיים ליד עם המספר הזה, ולא נוצר כפיל:{' '}
-          <Link href={`/admin/leads/${duplicateOf.id}`} className="font-medium underline">{duplicateOf.name}</Link>
-        </p>
-      ) : null}
-
-      {imported !== undefined ? (
-        <p className="rounded-md border border-hairline bg-raised px-4 py-3 text-[0.88rem]">
-          נוספו {imported} לידים{Number(skipped) > 0 ? ` · ${skipped} כבר היו ברשימה ודולגו` : ''}.
-        </p>
-      ) : null}
 
       <details className="rounded-lg border border-hairline p-4">
         <summary className="cursor-pointer text-[0.92rem] font-medium">ייבוא רשימה (הדבקה)</summary>
