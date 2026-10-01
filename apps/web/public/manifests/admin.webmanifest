@@ -1,0 +1,18 @@
+{
+  "id": "/admin",
+  "name": "Bossi ניהול",
+  "short_name": "Bossi ניהול",
+  "description": "לידים, שיחות ודיירים של הפלטפורמה.",
+  "lang": "he",
+  "dir": "rtl",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#131d26",
+  "theme_color": "#131d26",
+  "icons": [
+    { "src": "/icons/admin-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/admin-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

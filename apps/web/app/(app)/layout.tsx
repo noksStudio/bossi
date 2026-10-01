@@ -84,7 +84,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 p-5 pb-24 lg:p-7">{children}</main>
+        <main className="min-w-0 flex-1 p-5 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-7">{children}</main>
       </div>
 
       <MobileNav nav={shell.nav} />

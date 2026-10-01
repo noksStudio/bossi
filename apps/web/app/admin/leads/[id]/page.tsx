@@ -4,6 +4,7 @@ import {
   addProspectNote, deleteProspect, getProspect, listProspectNotes,
   setProspectBooked, setProspectContacted, setProspectFollowUp, setProspectIdentifiers,
 } from '@bossi/db';
+import { telHref } from '@/lib/phone';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatusPill } from '@/components/site/chrome';
 
@@ -102,7 +103,11 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       </div>
 
       <section className="space-y-1 rounded-lg border border-hairline p-4 text-[0.88rem]">
-        {prospect.phone ? <div dir="ltr" className="text-secondary">{prospect.phone}</div> : null}
+        {prospect.phone ? (
+          <a href={telHref(prospect.phone)} dir="ltr" className="block font-medium hover:underline" style={{ color: 'var(--accent)' }}>
+            {prospect.phone}
+          </a>
+        ) : null}
         {prospect.address ? <div className="text-secondary">{prospect.address}</div> : null}
         {prospect.website ? <div dir="ltr" className="text-secondary">{prospect.website}</div> : null}
         {prospect.note ? <div className="mt-2 text-secondary">{prospect.note}</div> : null}

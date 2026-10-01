@@ -119,6 +119,13 @@ describe('הפרדת ריאלמים ב-middleware', () => {
     expect(await go('/demo/invoice.pdf')).toBeNull();
   });
 
+  it('קבצי האפליקציה המותקנת פתוחים בלי עוגייה — redirect שובר את ההתקנה', async () => {
+    expect(await go('/manifests/app.webmanifest')).toBeNull();
+    expect(await go('/manifests/admin.webmanifest')).toBeNull();
+    expect(await go('/sw.js')).toBeNull();
+    expect(await go('/offline.html')).toBeNull();
+  });
+
   it('דף הנחיתה פתוח בלי עוגייה — אחרת כל קליק מפרסום נוחת על מסך התחברות', async () => {
     expect(await go('/importers')).toBeNull();
     expect(await go('/importers?utm_source=facebook')).toBeNull();

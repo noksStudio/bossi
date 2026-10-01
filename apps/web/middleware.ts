@@ -19,7 +19,11 @@ const PLATFORM_COOKIE = process.env['AUTH_PLATFORM_COOKIE'] ?? 'bossi_platform';
  * וכל השאר על עוגיית הצוות בלבד. עוגייה של עולם אחד אינה שווה דבר
  * בעולם השני, כאן ובשכבה שמתחת (כלל 2).
  */
-const PUBLIC = ['/', '/signin', '/api/auth', '/s', '/demo', '/api/files', '/importers'];
+const PUBLIC = [
+  '/', '/signin', '/api/auth', '/s', '/demo', '/api/files', '/importers',
+  // קבצי האפליקציה המותקנת: הדפדפן מבקש אותם בלי עוגייה, ו-redirect שובר את ההתקנה
+  '/manifests', '/sw.js', '/offline.html',
+];
 const PLATFORM_PUBLIC = ['/admin/signin', '/api/admin/auth'];
 
 export function middleware(request: NextRequest) {

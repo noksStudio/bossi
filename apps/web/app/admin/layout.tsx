@@ -8,7 +8,15 @@ import { AdminSidenav } from '@/components/admin/admin-sidenav';
 import { currentAdmin } from '@/lib/platform-session';
 
 export const dynamic = 'force-dynamic';
-export const metadata = { title: 'ניהול Bossi' };
+export const metadata = {
+  title: 'ניהול Bossi',
+  manifest: '/manifests/admin.webmanifest',
+  appleWebApp: { capable: true, title: 'Bossi ניהול', statusBarStyle: 'default' as const },
+  icons: {
+    icon: [{ url: '/icons/admin-icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: '/icons/admin-apple-touch-icon.png',
+  },
+};
 
 /**
  * שלד קונסולת הפלטפורמה.
@@ -66,7 +74,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </div>
         </header>
 
-        <main className="min-w-0 flex-1 p-5 pb-24 lg:p-7">{children}</main>
+        <main className="min-w-0 flex-1 p-5 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:p-7">{children}</main>
       </div>
 
       {admin ? <AdminMobileNav adminEmail={admin.email} /> : null}

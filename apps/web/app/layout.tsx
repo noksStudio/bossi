@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Frank_Ruhl_Libre, Heebo } from 'next/font/google';
+import { ServiceWorkerRegister } from '@/components/service-worker';
 import { themeScript } from '@/lib/theme';
 import './globals.css';
 
@@ -31,9 +32,19 @@ export const metadata: Metadata = {
     locale: 'he_IL',
     type: 'website',
   },
+  // אפליקציה מותקנת ממסך הבית. `/admin` מחליף את שלושת אלה ב-layout שלו
+  // — שתי אפליקציות נפרדות מאותו אתר, כל אחת עם אייקון ונקודת פתיחה משלה.
+  manifest: '/manifests/app.webmanifest',
+  appleWebApp: { capable: true, title: 'Bossi', statusBarStyle: 'default' },
+  icons: {
+    icon: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+    apple: '/icons/apple-touch-icon.png',
+  },
 };
 
 export const viewport: Viewport = {
+  // בלי cover, env(safe-area-inset-*) שווה 0 באייפון והתפריט התחתון יושב על פס הבית.
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#faf8f4' },
     { media: '(prefers-color-scheme: dark)', color: '#0e161d' },
@@ -46,7 +57,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <ServiceWorkerRegister />
+      </body>
     </html>
   );
 }

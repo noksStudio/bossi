@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>אין חיבור · Bossi</title>
+  <style>
+    :root { --bg: #faf8f4; --ink: #131d26; --muted: #5b6670; --accent: #a34c1d; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #0e161d; --ink: #faf8f4; --muted: #9aa5ae; --accent: #d47a41; }
+    }
+    html, body { height: 100%; margin: 0; }
+    body {
+      display: flex; align-items: center; justify-content: center;
+      background: var(--bg); color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+      padding: 24px; box-sizing: border-box; text-align: center;
+    }
+    main { max-width: 320px; }
+    h1 { font-size: 1.4rem; margin: 20px 0 8px; }
+    p { color: var(--muted); line-height: 1.6; margin: 0; }
+    button {
+      margin-top: 24px; border: 0; border-radius: 8px; padding: 12px 22px;
+      background: var(--accent); color: #fff; font: inherit; font-weight: 500; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <svg width="64" height="64" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+      <rect x="1.25" y="1.25" width="29.5" height="29.5" rx="7.5" stroke="var(--ink)" stroke-width="2.5" opacity="0.9"/>
+      <rect x="8" y="9" width="16" height="2.75" rx="1.375" fill="var(--ink)" opacity="0.45"/>
+      <rect x="8" y="14.6" width="16" height="2.75" rx="1.375" fill="var(--accent)"/>
+      <rect x="8" y="20.2" width="10" height="2.75" rx="1.375" fill="var(--ink)" opacity="0.45"/>
+    </svg>
+    <h1>אין חיבור לאינטרנט</h1>
+    <p>Bossi צריכה חיבור כדי להציג נתונים עדכניים. בדקו את הקליטה ונסו שוב.</p>
+    <button type="button" onclick="location.reload()">לנסות שוב</button>
+  </main>
+</body>
+</html>

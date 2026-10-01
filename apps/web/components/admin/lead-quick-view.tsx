@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { ProspectNoteRow, ProspectRow } from '@bossi/db';
 import { StatusPill } from '@/components/site/chrome';
+import { telHref } from '@/lib/phone';
 
 /**
  * לחיצה על שורת ליד פותחת תצוגה מהירה (מודאל, גיליון בנייד) — לא
@@ -29,11 +30,11 @@ export function LeadList({
     <>
       <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline">
         {prospects.map((p) => (
-          <li key={p.id}>
+          <li key={p.id} className="flex items-stretch">
             <button
               type="button"
               onClick={() => setSelectedId(p.id)}
-              className="flex w-full items-start justify-between gap-3 p-3.5 text-start transition-colors hover:bg-sunken"
+              className="flex min-w-0 flex-1 items-start justify-between gap-3 p-3.5 text-start transition-colors hover:bg-sunken"
             >
               <div className="min-w-0">
                 <div className="text-[0.9rem] font-medium">{p.name}</div>
@@ -51,6 +52,16 @@ export function LeadList({
                     : <StatusPill tone="warning">טרם נוצר קשר</StatusPill>}
               </div>
             </button>
+            {p.phone ? (
+              <a
+                href={telHref(p.phone)}
+                aria-label={`חיוג ל${p.name}`}
+                className="flex shrink-0 items-center border-s border-hairline px-4 text-[0.8rem] font-medium transition-colors hover:bg-sunken"
+                style={{ color: 'var(--accent)' }}
+              >
+                חיוג
+              </a>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -209,6 +220,11 @@ function LeadPopup({
               <div className="text-[0.72rem] text-muted">{sourceLabels[prospect.source] ?? prospect.source}</div>
 
               <AutoSaveField id={id} field="phone" label="טלפון" value={prospect.phone ?? ''} dir="ltr" onSaved={(v) => setField('phone', v)} />
+              {prospect.phone ? (
+                <a href={telHref(prospect.phone)} className="-mt-2 text-[0.74rem] hover:underline" style={{ color: 'var(--accent)' }}>
+                  חיוג ←
+                </a>
+              ) : null}
               <AutoSaveField id={id} field="address" label="מיקום" value={prospect.address ?? ''} onSaved={(v) => setField('address', v)} />
               {prospect.address ? (
                 <a
