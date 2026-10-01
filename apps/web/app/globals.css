@@ -181,6 +181,17 @@
     letter-spacing: -0.01em;
   }
 
+  /* iOS מצייר שדות תאריך ברוחב טבעי משלו ומתעלם מ-w-full — הם בורחים מהמסגרת. */
+  input[type='date'],
+  input[type='datetime-local'],
+  input[type='time'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    min-height: 2.5rem;
+  }
+
   ::selection {
     background: var(--accent-quiet);
     color: var(--accent-hover);

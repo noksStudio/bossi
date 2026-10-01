@@ -203,129 +203,155 @@ function LeadPopup({
   }
 
   async function remove() {
+    if (!window.confirm(`למחוק את "${prospect?.name ?? 'הליד'}"? אי אפשר לבטל.`)) return;
     await fetch(`/api/admin/leads/${id}`, { method: 'DELETE' });
     onClose();
     router.refresh();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose} role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-black/50 p-0 sm:items-center sm:p-4" onClick={onClose} role="presentation">
       <div
-        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-hairline bg-raised shadow-2xl sm:flex-row sm:overflow-hidden sm:rounded-2xl"
+        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-hairline bg-raised shadow-2xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-label={prospect?.name ?? 'ליד'}
       >
         {loading || !prospect ? (
-          <div className="flex-1 p-8 text-center text-[0.88rem] text-muted">טוען…</div>
+          <div className="flex items-center justify-between p-4">
+            <span className="text-[0.88rem] text-muted">טוען…</span>
+            <button type="button" onClick={onClose} aria-label="סגירה" className="-m-2 p-2 text-[1rem] text-muted hover:text-primary">✕</button>
+          </div>
         ) : (
           <>
-            {/* עמודת פרופיל */}
-            <aside className="flex shrink-0 flex-col gap-3 border-b border-hairline bg-sunken p-4 sm:w-64 sm:overflow-y-auto sm:overscroll-contain sm:border-b-0 sm:border-s">
-              <div className="flex items-start justify-between gap-2">
-                <Link href={`/admin/leads/${id}`} className="text-[1.05rem] font-medium hover:underline" style={{ color: 'var(--accent)' }}>
+            {/* כותרת קבועה — לא נגללת, כך שהסגירה תמיד בהישג יד */}
+            <header className="flex shrink-0 items-start gap-3 border-b border-hairline px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <Link href={`/admin/leads/${id}`} className="block truncate text-[1.05rem] font-medium hover:underline" style={{ color: 'var(--accent)' }}>
                   {prospect.name}
                 </Link>
-                <button type="button" onClick={onClose} className="shrink-0 text-[0.85rem] text-muted hover:text-primary">✕</button>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                  {prospect.booked_at ? <StatusPill tone="positive">שיחה נקבעה</StatusPill>
+                    : prospect.contacted ? <StatusPill tone="neutral">נוצר קשר</StatusPill>
+                      : <StatusPill tone="warning">טרם נוצר קשר</StatusPill>}
+                  <span className="text-[0.72rem] text-muted">{sourceLabels[prospect.source] ?? prospect.source}</span>
+                </div>
               </div>
-              <div>
-                {prospect.booked_at ? <StatusPill tone="positive">שיחה נקבעה</StatusPill>
-                  : prospect.contacted ? <StatusPill tone="neutral">נוצר קשר</StatusPill>
-                    : <StatusPill tone="warning">טרם נוצר קשר</StatusPill>}
-              </div>
-              <div className="text-[0.72rem] text-muted">{sourceLabels[prospect.source] ?? prospect.source}</div>
+              <button type="button" onClick={onClose} aria-label="סגירה" className="-m-2 shrink-0 p-2 text-[1.05rem] text-muted hover:text-primary">✕</button>
+            </header>
 
-              <button
-                type="button" onClick={() => setCalling(true)}
-                className="rounded-md py-2 text-[0.88rem] font-medium text-white" style={{ background: 'var(--accent)' }}
-              >
-                שיחה מודרכת
-              </button>
+            {/* גוף: בנייד עמודה אחת שנגללת כולה, בדסקטופ שתי עמודות שנגללות בנפרד */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[env(safe-area-inset-bottom)] sm:flex sm:overflow-hidden sm:pb-0">
+              <aside className="flex flex-col gap-3.5 border-b border-hairline bg-sunken p-4 sm:w-72 sm:shrink-0 sm:overflow-y-auto sm:overscroll-contain sm:border-b-0 sm:border-s">
+                <div className="flex gap-2">
+                  <button
+                    type="button" onClick={() => setCalling(true)}
+                    className="flex-1 rounded-md py-2.5 text-[0.92rem] font-medium text-white" style={{ background: 'var(--accent)' }}
+                  >
+                    שיחה מודרכת
+                  </button>
+                  {prospect.phone ? (
+                    <a href={telHref(prospect.phone)} className="flex items-center rounded-md border border-strong bg-raised px-4 text-[0.92rem] font-medium" style={{ color: 'var(--accent)' }}>
+                      חיוג
+                    </a>
+                  ) : null}
+                </div>
 
-              <AutoSaveField id={id} field="phone" label="טלפון" value={prospect.phone ?? ''} dir="ltr" onSaved={(v) => setField('phone', v)} />
-              {prospect.phone ? (
-                <a href={telHref(prospect.phone)} className="-mt-2 text-[0.74rem] hover:underline" style={{ color: 'var(--accent)' }}>
-                  חיוג ←
-                </a>
-              ) : null}
-              <AutoSaveField id={id} field="address" label="מיקום" value={prospect.address ?? ''} onSaved={(v) => setField('address', v)} />
-              {prospect.address ? (
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prospect.address)}`}
-                  target="_blank" rel="noreferrer" className="-mt-2 text-[0.74rem] hover:underline" style={{ color: 'var(--accent)' }}
-                >
-                  פתיחה במפות ←
-                </a>
-              ) : null}
-              <AutoSaveField id={id} field="website" label="אתר" value={prospect.website ?? ''} dir="ltr" onSaved={(v) => setField('website', v)} />
-              <AutoSaveField id={id} field="national_id" label='ת"ז בעל העסק' value={prospect.national_id ?? ''} dir="ltr" onSaved={(v) => setField('national_id', v)} />
-              <AutoSaveField id={id} field="company_number" label='ח"פ' value={prospect.company_number ?? ''} dir="ltr" onSaved={(v) => setField('company_number', v)} />
-              <AutoSaveField id={id} field="note" label="תיאור" value={prospect.note ?? ''} multiline onSaved={(v) => setField('note', v)} />
+                {prospect.phone || prospect.address ? (
+                  <div className="space-y-0.5 text-[0.85rem]">
+                    {prospect.phone ? <div dir="ltr" className="text-end text-secondary">{prospect.phone}</div> : null}
+                    {prospect.address ? (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(prospect.address)}`}
+                        target="_blank" rel="noreferrer" className="block text-secondary hover:underline"
+                      >
+                        {prospect.address} <span style={{ color: 'var(--accent)' }}>· מפות</span>
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
 
-              <label className="block">
-                <span className="text-[0.7rem] text-muted">פולואפ</span>
-                <input
-                  type="datetime-local"
-                  defaultValue={toLocalInputValue(prospect.next_follow_up_at)}
-                  onBlur={(e) => saveFollowUp(e.target.value)}
-                  className="mt-0.5 w-full rounded-md border border-strong bg-raised px-2.5 py-1.5 text-[0.82rem] outline-none focus:border-accent"
-                />
-              </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button" onClick={() => toggle('contacted', !prospect.contacted)}
+                    className="rounded-md border border-strong bg-raised px-2 py-2 text-[0.82rem]"
+                    style={{ color: prospect.contacted ? 'var(--positive)' : undefined }}
+                  >
+                    {prospect.contacted ? '✓ נוצר קשר' : 'סמן שנוצר קשר'}
+                  </button>
+                  <button
+                    type="button" onClick={() => toggle('booked', !prospect.booked_at)}
+                    className="rounded-md border border-strong bg-raised px-2 py-2 text-[0.82rem] font-medium"
+                    style={{ color: prospect.booked_at ? 'var(--positive)' : 'var(--accent)' }}
+                  >
+                    {prospect.booked_at ? '✓ שיחה נקבעה' : 'קבע שיחה'}
+                  </button>
+                </div>
 
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                <button
-                  type="button" onClick={() => toggle('contacted', !prospect.contacted)}
-                  className="rounded-md border border-strong px-2.5 py-1 text-[0.76rem]"
-                  style={{ color: prospect.contacted ? 'var(--positive)' : undefined }}
-                >
-                  {prospect.contacted ? '✓ נוצר קשר' : 'סמן שנוצר קשר'}
-                </button>
-                <button
-                  type="button" onClick={() => toggle('booked', !prospect.booked_at)}
-                  className="rounded-md border border-strong px-2.5 py-1 text-[0.76rem] font-medium"
-                  style={{ color: prospect.booked_at ? 'var(--positive)' : 'var(--accent)' }}
-                >
-                  {prospect.booked_at ? '✓ שיחה נקבעה' : 'קבע שיחה'}
-                </button>
-                <button type="button" onClick={remove} className="rounded-md px-2.5 py-1 text-[0.76rem]" style={{ color: 'var(--danger)' }}>
-                  הסרה
-                </button>
-              </div>
-            </aside>
+                <label className="block min-w-0">
+                  <span className="text-[0.75rem] text-muted">פולואפ — מתי לחזור</span>
+                  <input
+                    key={prospect.next_follow_up_at ? String(prospect.next_follow_up_at) : 'none'}
+                    type="datetime-local"
+                    defaultValue={toLocalInputValue(prospect.next_follow_up_at)}
+                    onBlur={(e) => saveFollowUp(e.target.value)}
+                    className="mt-1 block w-full rounded-md border border-strong bg-raised px-3 py-2 text-[0.88rem] outline-none focus:border-accent"
+                  />
+                </label>
 
-            {/* היסטוריה */}
-            <div className="flex min-w-0 flex-1 flex-col sm:overflow-hidden">
-              <div className="border-b border-hairline p-3.5">
-                <textarea
-                  value={draftNote}
-                  onChange={(e) => setDraftNote(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendNote(); }}
-                  placeholder="מה קרה עכשיו — Ctrl+Enter לשליחה"
-                  rows={2}
-                  className="w-full resize-none rounded-md border border-strong bg-raised px-3 py-2 text-[0.88rem] outline-none focus:border-accent"
-                />
-                <button
-                  type="button" onClick={sendNote} disabled={sending || !draftNote.trim()}
-                  className="mt-2 rounded-md px-3.5 py-1.5 text-[0.82rem] font-medium text-white disabled:opacity-50"
-                  style={{ background: 'var(--accent)' }}
-                >
-                  {sending ? 'שולח…' : 'הוספת רשומה'}
-                </button>
-              </div>
+                <details className="rounded-lg border border-hairline bg-raised">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[0.85rem] font-medium [&::-webkit-details-marker]:hidden">
+                    פרטי העסק
+                    <span className="text-[0.75rem] font-normal text-muted">עריכה</span>
+                  </summary>
+                  <div className="space-y-3 border-t border-hairline p-3">
+                    <AutoSaveField id={id} field="phone" label="טלפון" value={prospect.phone ?? ''} dir="ltr" onSaved={(v) => setField('phone', v)} />
+                    <AutoSaveField id={id} field="address" label="מיקום" value={prospect.address ?? ''} onSaved={(v) => setField('address', v)} />
+                    <AutoSaveField id={id} field="website" label="אתר" value={prospect.website ?? ''} dir="ltr" onSaved={(v) => setField('website', v)} />
+                    <AutoSaveField id={id} field="national_id" label='ת"ז בעל העסק' value={prospect.national_id ?? ''} dir="ltr" onSaved={(v) => setField('national_id', v)} />
+                    <AutoSaveField id={id} field="company_number" label='ח"פ' value={prospect.company_number ?? ''} dir="ltr" onSaved={(v) => setField('company_number', v)} />
+                    <AutoSaveField id={id} field="note" label="תיאור" value={prospect.note ?? ''} multiline onSaved={(v) => setField('note', v)} />
+                    <button type="button" onClick={remove} className="pt-1 text-[0.8rem]" style={{ color: 'var(--danger)' }}>
+                      מחיקת הליד
+                    </button>
+                  </div>
+                </details>
+              </aside>
 
-              <div className="flex-1 space-y-2.5 p-3.5 sm:overflow-y-auto sm:overscroll-contain">
-                {notes.length === 0 ? (
-                  <p className="text-[0.85rem] text-muted">עוד אין תיעוד שיחות.</p>
-                ) : (
-                  notes.map((n) => (
-                    <div key={n.id} className="rounded-lg border border-hairline p-3 text-[0.86rem]">
-                      <div className="text-[0.72rem] text-muted">{formatDateTime(n.created_at)}</div>
-                      <div className="mt-1 whitespace-pre-wrap text-secondary">{n.body}</div>
-                    </div>
-                  ))
-                )}
-              </div>
+              {/* מה היה בשיחות */}
+              <section className="flex min-w-0 flex-1 flex-col sm:overflow-hidden">
+                <div className="border-b border-hairline p-4">
+                  <textarea
+                    value={draftNote}
+                    onChange={(e) => setDraftNote(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) sendNote(); }}
+                    placeholder="מה קרה עכשיו?"
+                    rows={2}
+                    className="w-full resize-none rounded-md border border-strong bg-raised px-3 py-2 text-[0.9rem] outline-none focus:border-accent"
+                  />
+                  <button
+                    type="button" onClick={sendNote} disabled={sending || !draftNote.trim()}
+                    className="mt-2 rounded-md px-4 py-2 text-[0.85rem] font-medium text-white disabled:opacity-50"
+                    style={{ background: 'var(--accent)' }}
+                  >
+                    {sending ? 'שולח…' : 'הוספת רשומה'}
+                  </button>
+                </div>
+
+                <div className="flex-1 space-y-2.5 p-4 sm:overflow-y-auto sm:overscroll-contain">
+                  {notes.length === 0 ? (
+                    <p className="text-[0.85rem] text-muted">עוד אין תיעוד שיחות.</p>
+                  ) : (
+                    notes.map((n) => (
+                      <div key={n.id} className="rounded-lg border border-hairline p-3 text-[0.86rem]">
+                        <div className="text-[0.72rem] text-muted">{formatDateTime(n.created_at)}</div>
+                        <div className="mt-1 whitespace-pre-wrap text-secondary">{n.body}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </section>
             </div>
           </>
         )}
