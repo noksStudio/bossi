@@ -2,7 +2,6 @@ import { SiteHeader } from '@/components/site/header';
 import { CustomerCard } from '@/components/site/customer-card';
 import { DashboardPreview } from '@/components/site/dashboard-preview';
 import { SearchPreview } from '@/components/site/search-preview';
-import { Pricing } from '@/components/site/pricing';
 import { BossiWordmark } from '@/components/brand/logo';
 
 export default function LandingPage() {
@@ -17,7 +16,7 @@ export default function LandingPage() {
         <Retrieval />
         <Modules />
         <Money />
-        <PricingSection />
+        <CustomSection />
         <Trust />
         <Cta />
       </main>
@@ -48,11 +47,11 @@ function Hero() {
 
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <a
-              href="#pricing"
+              href="/importers#form"
               className="rounded-md px-5 py-3 text-[0.95rem] font-medium text-white"
               style={{ background: 'var(--accent)' }}
             >
-              להתחיל מ־497 ₪ לחודש
+              לשיחת אבחון — 30 דקות
             </a>
             <a href="#how" className="rounded-md border border-strong px-5 py-3 text-[0.95rem] font-medium">
               לראות איך זה עובד
@@ -348,27 +347,44 @@ function Money() {
   );
 }
 
-/* ─────────────────────────────────────────────────────────── Pricing */
+/* ─────────────────────────────────────────────────────────── Custom */
 
-function PricingSection() {
+const CUSTOM_STEPS = [
+  { t: 'אבחון — 30 דקות', d: 'ממפים יחד איפה הולכים כסף וזמן בעסק. בלי עלות ובלי התחייבות.' },
+  { t: 'אפיון', d: 'מגדירים בדיוק מה המערכת צריכה לעשות — לפי איך שאתם עובדים היום, לא להפך.' },
+  { t: 'הקמה', d: 'המערכת נבנית ומוזנת בנתונים שלכם. מתחילים מהחלק שכואב הכי הרבה.' },
+  { t: 'ליווי', d: 'ליווי אישי בהטמעה, עד שהצוות עובד עם המערכת בפועל — לא רק עד שהיא "עלתה".' },
+];
+
+function CustomSection() {
   return (
-    <section id="pricing" className="border-b border-hairline bg-sunken">
+    <section id="custom" className="border-b border-hairline bg-sunken">
       <div className="mx-auto max-w-6xl px-5 py-16 lg:py-20">
         <div className="max-w-2xl">
-          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">תמחור שנצמד למה שאתה באמת מפעיל</h2>
+          <h2 className="text-[1.9rem] leading-tight sm:text-[2.3rem]">מערכת מותאמת אישית, לא חבילה מהמדף</h2>
           <p className="mt-4 text-[1.02rem] leading-relaxed text-secondary">
-            החבילה קובעת אילו מודולים דלוקים וכמה מותר לצרוך — אחסון, מסמכים, מיילים
-            והודעות. חריגה מחויבת לפי שימוש, בלי הפתעות ובלי חסימה פתאומית.
+            כל עסק עובד אחרת. במקום תוכנה כללית שצריך להתעקם סביבה, המערכת נבנית בדיוק לאיך
+            שהעסק שלך עובד — על בסיס פלטפורמה יציבה, כך שזה מהיר ובטוח כמו מוצר מוכן ומותאם כמו פיתוח אישי.
           </p>
         </div>
 
-        <div className="mt-10">
-          <Pricing />
-        </div>
+        <ol className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {CUSTOM_STEPS.map((s, i) => (
+            <li key={s.t} className="rounded-lg border border-hairline bg-raised p-5">
+              <span className="text-[0.8rem] font-medium" style={{ color: 'var(--accent)' }}>שלב {i + 1}</span>
+              <h3 className="mt-1 text-[1.02rem]">{s.t}</h3>
+              <p className="mt-2 text-[0.9rem] leading-relaxed text-secondary">{s.d}</p>
+            </li>
+          ))}
+        </ol>
 
-        <p className="mt-6 text-[0.88rem] text-muted">
-          כל החבילות כוללות דייר מבודד, גיבוי יומי ותיעוד גישה מלא למסמכים.
-        </p>
+        <a
+          href="/importers#form"
+          className="mt-10 inline-block rounded-md px-6 py-3 text-[0.95rem] font-medium text-white"
+          style={{ background: 'var(--accent)' }}
+        >
+          לשיחת אבחון — 30 דקות, בלי עלות
+        </a>
       </div>
     </section>
   );
@@ -421,7 +437,7 @@ function Cta() {
             הכרטיס שלו ב-Bossi ותראה איך זה נראה כשהכול במקום אחד.
           </p>
           <a
-            href="mailto:hello@bossi.co.il"
+            href="/importers#form"
             className="mt-8 inline-block rounded-md px-6 py-3 text-[0.95rem] font-medium text-white"
             style={{ background: 'var(--accent)' }}
           >
@@ -446,7 +462,7 @@ function Footer() {
           <a href="#dashboard">דשבורד</a>
           <a href="#search">חיפוש</a>
           <a href="#modules">מודולים</a>
-          <a href="#pricing">מחירים</a>
+          <a href="#custom">מערכת מותאמת</a>
         </nav>
         <p className="text-xs text-muted">© {new Date().getFullYear()} Bossi</p>
       </div>

@@ -7,7 +7,7 @@ const LINKS = [
   { href: '#dashboard', label: 'דשבורד' },
   { href: '#search', label: 'חיפוש' },
   { href: '#modules', label: 'מודולים' },
-  { href: '#pricing', label: 'מחירים' },
+  { href: '#custom', label: 'מערכת מותאמת' },
 ];
 
 export function SiteHeader() {
@@ -29,11 +29,11 @@ export function SiteHeader() {
         <div className="ms-auto flex items-center gap-2.5 md:ms-0">
           <ThemeToggle />
           <a
-            href="#pricing"
+            href="/importers#form"
             className="rounded-md px-4 py-2 text-[0.9rem] font-medium text-white transition-colors"
             style={{ background: 'var(--accent)' }}
           >
-            להתחיל
+            לשיחת אבחון
           </a>
         </div>
       </div>
