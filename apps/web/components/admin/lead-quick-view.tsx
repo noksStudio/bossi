@@ -7,6 +7,7 @@ import type { ProspectNoteRow, ProspectRow } from '@bossi/db';
 import { StatusPill } from '@/components/site/chrome';
 import { telHref } from '@/lib/phone';
 import { CallGuide } from '@/components/admin/call-guide';
+import { useScrollLock } from '@/lib/use-scroll-lock';
 
 /**
  * לחיצה על שורת ליד פותחת תצוגה מהירה (מודאל, גיליון בנייד) — לא
@@ -148,6 +149,7 @@ function LeadPopup({
   const [sending, setSending] = useState(false);
   const [calling, setCalling] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  useScrollLock();
 
   useEffect(() => {
     let cancelled = false;
@@ -207,9 +209,9 @@ function LeadPopup({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose} role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center overscroll-contain bg-black/40 p-0 sm:items-center sm:p-4" onClick={onClose} role="presentation">
       <div
-        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-t-2xl border border-hairline bg-raised shadow-2xl sm:flex-row sm:rounded-2xl"
+        className="flex max-h-[92dvh] w-full max-w-3xl flex-col overflow-y-auto overscroll-contain rounded-t-2xl border border-hairline bg-raised shadow-2xl sm:flex-row sm:overflow-hidden sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -220,7 +222,7 @@ function LeadPopup({
         ) : (
           <>
             {/* עמודת פרופיל */}
-            <aside className="flex shrink-0 flex-col gap-3 border-b border-hairline bg-sunken p-4 sm:w-64 sm:border-b-0 sm:border-s sm:overflow-y-auto">
+            <aside className="flex shrink-0 flex-col gap-3 border-b border-hairline bg-sunken p-4 sm:w-64 sm:overflow-y-auto sm:overscroll-contain sm:border-b-0 sm:border-s">
               <div className="flex items-start justify-between gap-2">
                 <Link href={`/admin/leads/${id}`} className="text-[1.05rem] font-medium hover:underline" style={{ color: 'var(--accent)' }}>
                   {prospect.name}
@@ -293,7 +295,7 @@ function LeadPopup({
             </aside>
 
             {/* היסטוריה */}
-            <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+            <div className="flex min-w-0 flex-1 flex-col sm:overflow-hidden">
               <div className="border-b border-hairline p-3.5">
                 <textarea
                   value={draftNote}
@@ -312,7 +314,7 @@ function LeadPopup({
                 </button>
               </div>
 
-              <div className="flex-1 space-y-2.5 overflow-y-auto p-3.5">
+              <div className="flex-1 space-y-2.5 p-3.5 sm:overflow-y-auto sm:overscroll-contain">
                 {notes.length === 0 ? (
                   <p className="text-[0.85rem] text-muted">עוד אין תיעוד שיחות.</p>
                 ) : (

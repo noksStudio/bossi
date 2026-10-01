@@ -6,6 +6,7 @@ import {
   CALL_SCRIPT, OUTCOME_LABELS, callSummary, type Outcome, type ScriptOption, type StepId,
 } from '@/lib/call-script';
 import { telHref } from '@/lib/phone';
+import { useScrollLock } from '@/lib/use-scroll-lock';
 
 const PLACES = ['במשרד שלו', 'בבית קפה', 'בזום'] as const;
 
@@ -28,6 +29,7 @@ export function CallGuide({
   const [extra, setExtra] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  useScrollLock();
 
   const step = CALL_SCRIPT[stepId];
 
@@ -104,7 +106,7 @@ export function CallGuide({
 
   return (
     // stopPropagation: בפופ-אפ הליד, לחיצה על הרקע סוגרת אותו — בלי זה כל לחיצה כאן הייתה מבעבעת וסוגרת הכל.
-    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 sm:items-center sm:p-4" role="presentation" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[60] flex items-end justify-center overscroll-contain bg-black/50 sm:items-center sm:p-4" role="presentation" onClick={(e) => e.stopPropagation()}>
       <div
         className="flex max-h-[96dvh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-hairline bg-raised shadow-2xl sm:rounded-2xl"
         role="dialog" aria-modal="true" aria-label={`שיחה עם ${leadName}`}
@@ -122,7 +124,7 @@ export function CallGuide({
           <button type="button" onClick={onClose} className="shrink-0 px-1 text-[0.9rem] text-muted hover:text-primary" aria-label="סגירה">✕</button>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-4">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
           {trail.length > 0 ? (
             <p className="mb-3 text-[0.72rem] leading-relaxed text-muted">{trail.join(' ← ')}</p>
           ) : null}
