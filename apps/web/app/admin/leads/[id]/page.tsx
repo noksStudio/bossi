@@ -7,6 +7,7 @@ import {
 import { telHref } from '@/lib/phone';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatusPill } from '@/components/site/chrome';
+import { CallGuideButton } from '@/components/admin/call-guide';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'ליד · ניהול' };
@@ -114,6 +115,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       </section>
 
       <section className="flex flex-wrap items-center gap-3">
+        <CallGuideButton leadId={prospect.id} leadName={prospect.name} phone={prospect.phone} />
         <form action={toggleContacted}>
           <input type="hidden" name="contacted" value={prospect.contacted ? '0' : '1'} />
           <button type="submit" className="rounded-md border border-strong px-3.5 py-2 text-[0.85rem]" style={{ color: prospect.contacted ? 'var(--positive)' : undefined }}>

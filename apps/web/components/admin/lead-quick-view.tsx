@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import type { ProspectNoteRow, ProspectRow } from '@bossi/db';
 import { StatusPill } from '@/components/site/chrome';
 import { telHref } from '@/lib/phone';
+import { CallGuide } from '@/components/admin/call-guide';
 
 /**
  * לחיצה על שורת ליד פותחת תצוגה מהירה (מודאל, גיליון בנייד) — לא
@@ -145,6 +146,8 @@ function LeadPopup({
   const [loading, setLoading] = useState(true);
   const [draftNote, setDraftNote] = useState('');
   const [sending, setSending] = useState(false);
+  const [calling, setCalling] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -158,7 +161,7 @@ function LeadPopup({
         setLoading(false);
       });
     return () => { cancelled = true; };
-  }, [id]);
+  }, [id, reloadKey]);
 
   /** מעדכן שדה טקסט מקומי מיד אחרי שמירה אטומית — בלי זה, תצוגה נגזרת כמו קישור המפות נשארת עם הערך הישן עד סגירה ופתיחה מחדש של הפופ-אפ. */
   function setField(field: keyof ProspectRow, value: string) {
@@ -230,6 +233,13 @@ function LeadPopup({
                     : <StatusPill tone="warning">טרם נוצר קשר</StatusPill>}
               </div>
               <div className="text-[0.72rem] text-muted">{sourceLabels[prospect.source] ?? prospect.source}</div>
+
+              <button
+                type="button" onClick={() => setCalling(true)}
+                className="rounded-md py-2 text-[0.88rem] font-medium text-white" style={{ background: 'var(--accent)' }}
+              >
+                שיחה מודרכת
+              </button>
 
               <AutoSaveField id={id} field="phone" label="טלפון" value={prospect.phone ?? ''} dir="ltr" onSaved={(v) => setField('phone', v)} />
               {prospect.phone ? (
@@ -318,6 +328,13 @@ function LeadPopup({
           </>
         )}
       </div>
+      {calling && prospect ? (
+        <CallGuide
+          leadId={id} leadName={prospect.name} phone={prospect.phone}
+          onClose={() => setCalling(false)}
+          onSaved={() => { setReloadKey((k) => k + 1); router.refresh(); }}
+        />
+      ) : null}
     </div>
   );
 }
