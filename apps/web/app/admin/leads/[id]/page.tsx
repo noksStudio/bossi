@@ -8,6 +8,7 @@ import { telHref } from '@/lib/phone';
 import { requireAdmin } from '@/lib/platform-session';
 import { StatusPill } from '@/components/site/chrome';
 import { CallGuideButton } from '@/components/admin/call-guide';
+import { WhatsAppDemo } from '@/components/admin/whatsapp-demo';
 
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'ליד · ניהול' };
@@ -131,6 +132,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         <form action={removeProspect}>
           <button type="submit" className="rounded-md px-3.5 py-2 text-[0.85rem]" style={{ color: 'var(--danger)' }}>הסרה</button>
         </form>
+      </section>
+
+      <section className="rounded-lg border border-hairline p-4">
+        <h2 className="mb-3 text-[0.92rem] font-medium" style={{ color: 'var(--positive)' }}>שליחת דמו בוואטסאפ</h2>
+        <div className="max-w-md">
+          <WhatsAppDemo leadId={prospect.id} phone={prospect.phone} />
+        </div>
       </section>
 
       <section className="rounded-lg border border-hairline p-4">

@@ -7,6 +7,7 @@ import type { ProspectNoteRow, ProspectRow } from '@bossi/db';
 import { StatusPill } from '@/components/site/chrome';
 import { telHref } from '@/lib/phone';
 import { CallGuide } from '@/components/admin/call-guide';
+import { WhatsAppDemo } from '@/components/admin/whatsapp-demo';
 import { useScrollLock } from '@/lib/use-scroll-lock';
 
 /**
@@ -257,6 +258,16 @@ function LeadPopup({
                     </a>
                   ) : null}
                 </div>
+
+                <details className="rounded-lg border border-hairline bg-raised">
+                  <summary className="flex cursor-pointer list-none items-center justify-between px-3 py-2.5 text-[0.85rem] font-medium [&::-webkit-details-marker]:hidden">
+                    <span style={{ color: 'var(--positive)' }}>שליחת דמו בוואטסאפ</span>
+                    <span className="text-[0.75rem] font-normal text-muted">קישור לכניסה</span>
+                  </summary>
+                  <div className="border-t border-hairline p-3">
+                    <WhatsAppDemo leadId={id} phone={prospect.phone} onLogged={setNotes} />
+                  </div>
+                </details>
 
                 {prospect.phone || prospect.address ? (
                   <div className="space-y-0.5 text-[0.85rem]">
