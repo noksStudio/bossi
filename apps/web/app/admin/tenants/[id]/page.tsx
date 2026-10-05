@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import {
-  applyFeaturePackageToTenant, getTenantSummary, listFeaturePackages, recordAudit,
+  applyFeaturePackageToTenant, demoTenants, getTenantSummary, listFeaturePackages, recordAudit,
   setTenantModule, setTenantPlan, tenantModules,
 } from '@bossi/db';
 import { ALL_MODULES, PLANS, PLAN_ORDER, type PlanId } from '@bossi/modules';
@@ -32,6 +32,8 @@ export default async function AdminTenantPage({ params }: { params: Promise<{ id
   const enabledIds = new Set(enabled.filter((m) => m.enabled).map((m) => m.module_id));
   const plan = PLANS[tenant.plan as PlanId] ?? PLANS.starter;
   const packages = await listFeaturePackages();
+  // כניסת דמו עובדת רק לדייר שמסומן כדמו במסד **וגם** מופיע ב-DEMO_TENANT_SLUGS.
+  const demoLive = tenant.is_demo && demoTenants().includes(tenant.slug);
 
   async function toggleModule(moduleId: string, next: boolean) {
     'use server';
@@ -84,6 +86,22 @@ export default async function AdminTenantPage({ params }: { params: Promise<{ id
           <span dir="ltr">{tenant.slug}</span>
           {tenant.business_id ? ` · ח.פ. ${tenant.business_id}` : ''}
         </p>
+        {demoLive ? (
+          <a
+            href={`/api/auth/demo?t=${encodeURIComponent(tenant.slug)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 flex items-center justify-center rounded-md px-5 py-3 text-[0.95rem] font-medium text-white sm:inline-flex"
+            style={{ background: 'var(--accent)' }}
+          >
+            כניסה לדמו ←
+          </a>
+        ) : tenant.is_demo ? (
+          <p className="mt-4 rounded-md border px-4 py-3 text-[0.82rem]" style={{ borderColor: 'var(--warning)', background: 'var(--warning-quiet)' }}>
+            הדמו כבוי בסביבה הזו. כדי להפעיל אותו, מוסיפים את <span dir="ltr" className="font-medium">{tenant.slug}</span> ל-
+            <span dir="ltr">DEMO_TENANT_SLUGS</span> ב-Vercel.
+          </p>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 divide-x divide-x-reverse divide-hairline rounded-lg border border-hairline lg:grid-cols-4">
